@@ -1,0 +1,2 @@
+# Local development only. Generate your own 32-byte hex secret before starting.
+CONTEXTFLOW_MASTER_KEY=replace_with_64_hex_characters

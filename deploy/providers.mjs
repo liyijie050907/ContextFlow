@@ -1,7 +1,7 @@
 // Text adapters for user-configured services. No keys are returned to the browser.
 import {fetchService} from './network.mjs';
 import {randomUUID} from 'node:crypto';
-const fallbackSession='ses_'+randomUUID();
+let fallbackSession;
 const isOpenCode=url=>url.hostname==='opencode.ai';
 export const protocols=['chat-completions','responses','anthropic','gemini'];
 const localHost=host=>host==='localhost'||host==='::1'||host==='[::1]'||/^127\./.test(host)||/^10\./.test(host)||/^192\.168\./.test(host)||/^172\.(?:1[6-9]|2\d|3[01])\./.test(host);
@@ -31,7 +31,7 @@ export function providerEndpoint(config,kind,model=''){
  }else{path=path.replace(/\/(?:chat\/completions|responses|messages|models)$/,'');if(!path&&config.protocol==='anthropic')path='/v1';url.pathname=path+(kind==='models'?'/models':config.protocol==='anthropic'?'/messages':config.protocol==='responses'?'/responses':'/chat/completions');}
  return url.href;
 }
-export function providerHeaders(config,sessionID=fallbackSession){const headers={'Content-Type':'application/json'};if(isOpenCode(new URL(config.baseURL))){if(config.key)headers.Authorization='Bearer '+config.key;headers['User-Agent']='ContextFlow/0.13.1';headers['x-opencode-session']=sessionID;return headers;}if(config.protocol==='anthropic'){if(config.key)headers['x-api-key']=config.key;headers['anthropic-version']=config.apiVersion||'2026-10-21';}else if(config.protocol==='gemini'){if(config.key)headers['x-goog-api-key']=config.key;}else if(config.key)headers.Authorization='Bearer '+config.key;return headers;}
+export function providerHeaders(config,sessionID){sessionID ||= (fallbackSession ||= 'ses_'+randomUUID());const headers={'Content-Type':'application/json'};if(isOpenCode(new URL(config.baseURL))){if(config.key)headers.Authorization='Bearer '+config.key;headers['User-Agent']='ContextFlow/0.13.1';headers['x-opencode-session']=sessionID;return headers;}if(config.protocol==='anthropic'){if(config.key)headers['x-api-key']=config.key;headers['anthropic-version']=config.apiVersion||'2026-10-21';}else if(config.protocol==='gemini'){if(config.key)headers['x-goog-api-key']=config.key;}else if(config.key)headers.Authorization='Bearer '+config.key;return headers;}
 function text(value){if(typeof value==='string')return value;if(Array.isArray(value))return value.filter(part=>!part.thought).map(part=>typeof part==='string'?part:part.text||'').join('');return '';}
 export function providerRequest(config,model,input){
  if(typeof model!=='string'||!model.trim()||model.length>256)throw Error('请填写服务商提供的模型 ID');
