@@ -83,7 +83,7 @@ export async function customModels(config,fetchImpl=fetchService){
  const models=[],seen=new Set(),pages=new Set();let url=new URL(providerEndpoint(config,'models'));
  for(let page=0;page<30;page++){
   if(pages.has(url.href))throw Error('服务商模型列表分页重复，请稍后重试');pages.add(url.href);
-  const response=await fetchImpl(url.href,{headers:providerHeaders(config),redirect:'error',signal:AbortSignal.timeout(20000)});if(!response.ok)return responseError(response,config.key);const value=await response.json(),list=Array.isArray(value)?value:value.data||value.models||[];if(!Array.isArray(list))throw Error('服务未返回有效模型列表');
+  const response=await fetchImpl(url.href,{headers:providerHeaders(config),redirect:'error',signal:AbortSignal.timeout(20000)});if(!response.ok)return responseError(response,config.key);const text=await response.text();if(/^\s*</.test(text))throw Error('服务商模型接口返回了网页，而非模型列表。请检查 API 地址是否误填为控制台地址，或是否被网关拦截。');let value;try{value=JSON.parse(text);}catch{throw Error('服务商模型接口返回了无效 JSON，请检查 API 地址或联系服务商。');}const list=Array.isArray(value)?value:value?.data||value?.models;if(!Array.isArray(list))throw Error('服务未返回有效模型列表');
   for(const m of list){if(config.protocol==='gemini'&&m.supportedGenerationMethods&&!m.supportedGenerationMethods.includes('generateContent'))continue;const id=String(m.id||m.name||'').replace(config.protocol==='gemini'?/^models\//:/^$/,'');if(!id||seen.has(id))continue;seen.add(id);models.push({id,name:String(m.display_name||m.displayName||m.name||m.id||'')});}
   if(config.protocol==='gemini'&&value.nextPageToken){url.searchParams.set('pageToken',value.nextPageToken);continue;}
   if(config.protocol==='anthropic'&&value.has_more){if(!value.last_id)throw Error('服务商模型分页缺少游标');url.searchParams.set('after_id',value.last_id);continue;}

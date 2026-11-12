@@ -1,4 +1,5 @@
 import {serviceCatalog} from './service-catalog';
+import {serviceJSON} from './service-response';
 import {preparedLookup} from './reading-cache';
 import {consumeLiveStream} from './live-stream';
 import {cachedTranslation,cacheTranslation} from './translation-cache';
@@ -14,9 +15,9 @@ type UI={modal:(title:string,body:string,wide?:boolean)=>void;esc:(value:unknown
 let sessionToken='',choice:Choice|undefined;
 export async function liveAPI<T=any>(path:string,body:unknown={},signal?:AbortSignal):Promise<T>{
  if(location.protocol==='file:')throw Error('AI 缓存需要后台服务。请使用整合包的启动脚本，或打开自行部署的网址；本页面仍可离线阅读和导出备份。');
- if(!sessionToken){const response=await fetch('/api/session');if(!response.ok)throw Error('当前网页尚未连接生成服务，请使用项目的实时预览地址。');sessionToken=(await response.json()).token;}
+ if(!sessionToken){const response=await fetch('/api/session'),session=await serviceJSON(response,'/api/session');if(!response.ok)throw Error(session.error||'当前网页尚未连接 AI 后台服务。');if(typeof session.token!=='string'||!session.token)throw Error('网站后台没有返回会话凭据，请检查 /api/session 路由并更新后台。');sessionToken=session.token;}
  let response:Response;try{response=await fetch('/api'+path,{method:'POST',headers:{'Content-Type':'application/json','X-ContextFlow-Client':sessionToken},body:JSON.stringify(body),signal});}catch{throw Error('与当前项目的连接中断，请检查开发服务器是否仍在运行，再重试。');}
- const value=await response.json();if(!response.ok){if(response.status===403)sessionToken='';throw Error(value.error||'请求未能完成');}return value;
+ if(response.status===403)sessionToken='';const value=await serviceJSON(response,'/api'+path);if(!response.ok)throw Error(value.error||'请求未能完成');return value;
 }
 async function modelChoice():Promise<Choice>{if(choice)return choice;const state=await liveAPI<ServiceStatus>('/status');const provider=state.preferences?.provider||(state.chatgpt?'chatgpt':'');if(!provider)throw Error(state.credentialIssue||'请先连接 ChatGPT，或主动选择并配置独立 API。');if(provider==='custom'){if(!state.custom||!state.preferences?.model)throw Error('请先配置自定义 API 并填写模型 ID。');choice={provider,model:state.preferences.model};return choice;}const {models}=await liveAPI<{models:Model[]}>('/models',{provider});const model=models.find(m=>m.id===state.preferences?.model)?.id||models[0]?.id;if(!model)throw Error('当前服务没有可用模型。');choice={provider,model};return choice;}
 export async function currentModelChoice(){return modelChoice();}
@@ -42,7 +43,7 @@ export async function showServiceSettings(ui:UI,onReady?:()=>void){
 async function liveTextStream<T>(path:string,body:unknown,onDelta:(text:string)=>void,signal?:AbortSignal):Promise<T>{
  if(!sessionToken)await liveAPI('/status');
  const response=await fetch('/api'+path,{method:'POST',headers:{'Content-Type':'application/json','X-ContextFlow-Client':sessionToken},body:JSON.stringify(body),signal});
- if(!response.ok){const error=await response.json();throw Error(error.error||'查询未能完成');}
+ if(!response.ok){if(response.status===403)sessionToken='';const error=await serviceJSON(response,'/api'+path);throw Error(error.error||'查询未能完成');}
  return consumeLiveStream<T>(response,onDelta);
 }
 export async function showLiveLookup(word:string,originalContext:string,ui:UI,onSave:(lexeme:Lexeme)=>Promise<void>,force=false){

@@ -3,6 +3,10 @@ import assert from 'node:assert/strict';
 import {normalizeCustomConfig,publicCustomConfig,providerEndpoint,providerHeaders,providerRequest,consumeProviderResponse,customInference,customModels} from '../../assistant/providers.mjs';
 const config=(protocol='chat-completions')=>normalizeCustomConfig({protocol,baseURL:'https://example.invalid/v1',key:'opaque-vendor-key',maxOutputTokens:16000});
 const sse=(values)=>new Response(values.map(value=>'data: '+(typeof value==='string'?value:JSON.stringify(value))).join('\n\n'),{headers:{'Content-Type':'text/event-stream'}});
+test('model discovery distinguishes upstream HTML and invalid catalogs without leaking their bodies',async()=>{
+ for(const body of ['<!doctype html><body>opaque-vendor-key</body>','invalid opaque-vendor-key','{}','null'])await assert.rejects(()=>customModels(config(),async()=>new Response(body)),e=>!e.message.includes('opaque-vendor-key')&&!e.message.includes('Unexpected token'));
+ assert.deepEqual(await customModels(config(),async()=>new Response('{"data":[{"id":"model-one"}]}')),[{id:'model-one',name:'model-one'}]);
+});
 test('model discovery follows Gemini and Anthropic pages and keeps model display names',async()=>{for(const protocol of ['gemini','anthropic']){let count=0;const result=await customModels(config(protocol),async url=>{count++;if(count===2)assert(url.includes(protocol==='gemini'?'pageToken=next':'after_id=model-one'));const body=protocol==='gemini'?{models:[{name:'models/model-'+count,displayName:'Model '+count,supportedGenerationMethods:['generateContent']}],...(count===1?{nextPageToken:'next'}:{})}:{data:[{id:'model-'+count,display_name:'Model '+count}],has_more:count===1,last_id:'model-one'};return new Response(JSON.stringify(body),{headers:{'Content-Type':'application/json'}});});assert.equal(count,2);assert.equal(result.length,2);assert.equal(result[1].name,'Model 2');}});
 test('custom credentials accept vendor keys and remain bound to the saved address',()=>{
  const c=config();assert.equal(c.key,'opaque-vendor-key');assert(!JSON.stringify(publicCustomConfig(c)).includes(c.key));assert.equal(normalizeCustomConfig({...c,key:''},c).key,c.key);

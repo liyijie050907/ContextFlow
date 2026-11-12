@@ -30,6 +30,14 @@ docker compose up -d --build
 
 不要只将 `public/index.html` 上传静态托管：这样能进行本机数据管理及阅读，但 `/api/*` 不存在，AI 缓存不能运行。AI 完整版需要整个 Node 服务和反向代理，不能像纯静态建筑展示页那样只上传网页。
 
+### Cloudflare Pages 返回 `Unexpected token '<'`
+
+纯静态 Pages 会把不存在的 `/api/session` 等路径回退到首页，HTTP 状态甚至是 200。浏览器收到 `<!doctype html>` 而不是 JSON，模型目录请求尚未到达服务商，因此更换 API Key 无效。
+
+本目录的后台使用 Node 24、文件存储与加密会话，不能把 `server.mjs` 放进 Pages 静态目录就运行，也不是现成的 Pages Functions/Workers 项目。当前可用方法是按上面的 Node/Docker 步骤运行完整目录，再让网站域名统一反向代理到 Node 服务（包含 `/api/*`）。若要保留纯 Cloudflare 托管，需要另行适配 Functions/Workers 和持久化存储。
+
+检查部署时访问 `/api/session`：应返回带 `token` 的 JSON 和会话 Cookie；如果仍显示网页或 HTML，应先修正后台部署。不要把含 token 的响应贴到公开位置。页面和后台应从同一版本一起更新。切换域名前，先从原网站导出完整学习备份，再在新网址导入。
+
 ## API 与数据
 
 - 在线页面「设置 → 阅读缓存与查询」选择自定义 API，填写服务商地址、Key、协议及模型 ID。支持四种已适配的文本协议；不提供 ChatGPT 套餐 OAuth。保存配置不会自动发送测试请求。
