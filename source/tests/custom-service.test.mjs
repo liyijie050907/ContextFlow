@@ -31,7 +31,7 @@ test('isolated custom services support all learning routes and restore encrypted
  const stop=async()=>{if(child&&child.exitCode===null){const exited=new Promise(r=>child.once('exit',r));child.kill();await exited;}};
  // Do not reuse sockets across the deliberate kill/restart in this fixture.
  const post=async(path,body={})=>{const response=await fetch(base+path,{method:'POST',headers:{Connection:'close',Origin:base,'Content-Type':'application/json','X-ContextFlow-Token':token},body:JSON.stringify(body)});const text=await response.text();assert.equal(response.status,200,text);return response.headers.get('content-type').includes('ndjson')?text.split('\n').filter(Boolean).map(line=>JSON.parse(line)):JSON.parse(text);};
- try{await start();for(protocol of ['chat-completions','responses','anthropic','gemini']){
+ try{await start();const loginA=await post('/signin'),loginB=await post('/signin');assert.equal(loginA.url,loginB.url);assert.equal(new URL(loginA.url).hostname,'auth.openai.com');for(protocol of ['chat-completions','responses','anthropic','gemini']){
   const result=await post('/custom-service',{protocol,baseURL:upstreamURL+(protocol==='gemini'?'/v1beta':'/v1'),key:'synthetic-provider-key'});assert(!JSON.stringify(result).includes('synthetic-provider-key'));
   await post('/service-choice',{provider:'custom',model:'vendor-model'});const selected={provider:'custom',model:'vendor-model'};
   const state=await post('/status');assert.equal(state.custom,true);assert.equal(state.preferences.model,'vendor-model');assert(!JSON.stringify(state).includes('synthetic-provider-key'));

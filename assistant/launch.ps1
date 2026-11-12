@@ -10,7 +10,7 @@ try {
     Set-ContextFlowNetwork
     if (-not (Test-Path -LiteralPath $runtimePath)) { throw 'node.exe is missing. Extract the complete ContextFlow package before starting.' }
     $health = Get-ContextFlowHealth
-    if ($health -and $health.app -eq 'ContextFlow' -and $health.version -ne '0.16.0') {
+    if ($health -and $health.app -eq 'ContextFlow' -and $health.version -ne '0.17.0') {
         if ($health.active) { throw 'The assistant is generating. Wait for completion or cancel it before updating.' }
         $oldHelpers = Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" | Where-Object { $_.ExecutablePath -eq $runtimePath -and $_.CommandLine -match 'server\.mjs' }
         if (-not $oldHelpers) { throw 'An older ContextFlow assistant is running from another folder. Run its Stop-ContextFlow.cmd before starting this version.' }

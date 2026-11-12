@@ -42,6 +42,7 @@ const server=http.createServer(async(req,res)=>{let session;res.setHeader('Cache
  session=await sessionFor(req,res);if(req.headers.origin!==origin||req.headers['x-contextflow-client']!==session.token||!req.headers['content-type']?.startsWith('application/json')){json(res,403,{error:'会话已更新，请刷新页面后重试'});return;}
  session.calls=session.calls.filter(time=>time>Date.now()-60000);if(session.calls.length>=120||session.busy>=4){json(res,429,{error:'请求过于频繁，请稍后重试'});return;}session.calls.push(Date.now());const body=await bodyJSON(req);
  if(path==='/api/status'){json(res,200,{hosted:true,chatgpt:false,api:false,custom:!!session.config,customConfig:publicCustomConfig(session.config),preferences:session.preferences});return;}
+ if(path==='/api/discover-models'){const config=normalizeCustomConfig(body,session.config);await validateHost(config);json(res,200,{models:await customModels(config)});return;}
  if(path==='/api/custom-service'){const config=normalizeCustomConfig(body,session.config);await validateHost(config);session.config=config;await persist(session);json(res,200,{ok:true,customConfig:publicCustomConfig(config)});return;}
  if(path==='/api/service-choice'){const model=modelID(body);if(!session.config)throw Error('请先保存 API 配置');session.preferences={provider:'custom',model};await persist(session);json(res,200,{ok:true});return;}
  if(path==='/api/forget'){session.config=undefined;session.preferences=undefined;await persist(session);json(res,200,{ok:true});return;}

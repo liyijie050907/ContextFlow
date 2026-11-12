@@ -1,3 +1,11 @@
+# 0.17.0 登录与模型配置
+
+常见服务商 / 自定义接口两种模式。常见服务商内置官方地址与协议，只填写 Key 即可获取实际模型列表并选择；读取目录不切换已使用的接口，也不发送推理请求。其他接口可配置地址和协议，必要时手动补模型。模型目录支持 Gemini / Anthropic 分页。
+
+ChatGPT 登录地址请求失败时保留窗口并显示错误，成功后保留备用打开链接。重复登录复用尚未结束的 OAuth 地址。PKCE、state、nonce、受众及授权范围校验保持有效。真实 OAuth 成功仍取决于用户完成官方授权及服务权限，自动化只模拟登录页与错误。
+
+服务商依据：[OpenAI 登录](https://developers.openai.com/siwc/token-sharing-open-source/sign-in)、[DeepSeek 模型](https://api-docs.deepseek.com/api/list-models/)、[Claude 模型](https://platform.claude.com/docs/en/api/models/list)、[Gemini 模型](https://ai.google.dev/api/models)、[OpenRouter](https://openrouter.ai/docs/api/api-reference/models/get-models)、[OpenCode](https://opencode.ai/docs/console/go/)。
+
 # 0.16.0 五篇识别与整合包
 
 导入支持 Article 1–5、第一篇、数字标题、Markdown 1–6 级标题、加粗标题及 JSON articles 数组。保存前显示识别数量和每篇标题。旧的合并文章若识别到五篇，可在阅读页点击“拆分为 5 篇”；保留词汇表、首篇原 ID，并用 batchId 关联五篇导航。程序仍不生成文章。

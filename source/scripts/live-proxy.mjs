@@ -2,7 +2,7 @@
 import {execFile} from 'node:child_process';
 import {resolve} from 'node:path';
 const service='http://127.0.0.1:17863';let starting;
-const allowed=new Set(['/status','/models','/progress','/cancel','/signin','/key','/forget','/translate','/lookup','/lookup-fast','/translate-fast','/prepare-reading','/network-test','/custom-service','/service-choice','/test-service']);
+const allowed=new Set(['/status','/models','/progress','/cancel','/signin','/key','/forget','/translate','/lookup','/lookup-fast','/translate-fast','/prepare-reading','/network-test','/custom-service','/discover-models','/service-choice','/test-service']);
 async function ensure(output){try{const health=await fetch(service+'/health',{signal:AbortSignal.timeout(1000)}).then(r=>r.json());if(health.app==='ContextFlow'&&health.inlineReady&&health.lookupReady&&health.translationReady&&health.precacheReady&&health.customApiReady)return;}catch{}
  if(!starting)starting=new Promise((resolveStart,reject)=>execFile('powershell.exe',['-NoProfile','-NonInteractive','-WindowStyle','Hidden','-File',resolve(output,'assistant/launch.ps1'),'-NoBrowser'],{windowsHide:true},(error,stdout,stderr)=>error?reject(Error((stdout+stderr).trim()||'后台生成服务未能启动')):resolveStart())).finally(()=>{starting=undefined;});await starting;
  const health=await fetch(service+'/health').then(r=>r.json());if(!health.inlineReady)throw Error('后台服务版本较旧，请等待当前生成完成后重新启动项目。');}
