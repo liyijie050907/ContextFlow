@@ -68,3 +68,7 @@ D1 只保存加密 API 配置、模型选择及过期时间，不保存学习文
 若原项目是 Direct Upload、不能关联 GitHub，可在本目录运行 `npx wrangler login`、`npm run build`、`npx wrangler pages deploy public --project-name=contextflow-bgk`。它会同时编译当前目录的 `functions/`。生产 D1、Secret、兼容性标志仍按上述步骤在控制台配置。请仅在确认目标项目名称后自行执行。
 
 官方说明：[Pages Functions](https://developers.cloudflare.com/pages/functions/get-started/)、[D1 绑定](https://developers.cloudflare.com/pages/functions/bindings/#d1-databases)、[Node 兼容](https://developers.cloudflare.com/workers/runtime-apis/nodejs/)。
+
+## 0.18.2 查询更新
+
+详细解释采用流式连接，显示接收进度；只有完整且通过字段校验的解释和例句才会缓存。短暂的 HTTP 502/503/504 不再被误判为未部署后台，保留简明词义并允许重试。云端版继续使用 API Key，不额外安装本机连接程序。

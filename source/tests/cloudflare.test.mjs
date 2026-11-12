@@ -36,3 +36,18 @@ test('Cloudflare expires saved configuration and rejects decryption under a chan
 });
 
 test('Cloudflare transport never forwards secrets through redirects',async()=>{let calls=0;await assert.rejects(()=>cloudflareFetch('https://opencode.ai/inference/go/v1/models',{headers:{Authorization:'Bearer synthetic'}},async(url,options)=>{calls++;assert.equal(options.redirect,'manual');return new Response('',{status:302,headers:{Location:'https://attacker.invalid'}});}),/重定向/);assert.equal(calls,1);});
+test('detailed lookup opens its stream before inference completes and only returns a validated final result',async()=>{
+ const env=envFor(),client=await connect(env);await call(env,client,'/custom-service',service);let upstream;
+ const request=new Request(origin+'/api/lookup',{method:'POST',headers:{Origin:origin,Cookie:client.cookie,'Content-Type':'application/json','X-ContextFlow-Client':client.token,Accept:'application/x-ndjson'},body:JSON.stringify({provider:'custom',model:'mock-model',word:'river',context:'A river flows.'})});
+ const response=await handleCloudflare(request,env,async()=>new Response(new ReadableStream({start(c){upstream=c;}}),{headers:{'Content-Type':'text/event-stream'}}));
+ assert.match(response.headers.get('Content-Type'),/ndjson/);const reader=response.body.getReader(),decode=new TextDecoder();assert.equal(JSON.parse(decode.decode((await reader.read()).value)).type,'details');
+ const result={lemma:'river',meaning:'河流',pos:'n.',explanation:'流动的天然水道',example:'A river flows.',exampleZh:'河流流淌。'},raw=JSON.stringify(result);
+ const emit=value=>upstream.enqueue(new TextEncoder().encode('data: '+JSON.stringify(value)+'\n\n'));
+ emit({choices:[{delta:{content:raw.slice(0,15)},finish_reason:null}]});const progress=JSON.parse(decode.decode((await reader.read()).value));assert.equal(progress.type,'details');assert.equal(progress.text,raw.slice(0,15));
+ emit({choices:[{delta:{content:raw.slice(15)},finish_reason:'stop'}]});upstream.close();let text='';for(;;){const part=await reader.read();if(part.done)break;text+=decode.decode(part.value);}const events=text.trim().split('\n').map(x=>JSON.parse(x));assert.deepEqual(events.at(-1),{type:'done',result});env.CONTEXTFLOW_DB.sqlite.close();
+});
+test('invalid detail JSON is a terminal stream error and cancellation aborts the provider',async()=>{
+ const env=envFor(),client=await connect(env);await call(env,client,'/custom-service',service);const body={provider:'custom',model:'mock-model',word:'river',context:'A river.'},headers={Accept:'application/x-ndjson'};
+ const events=await call(env,client,'/lookup',body,async()=>new Response('data: '+JSON.stringify({choices:[{delta:{content:'broken JSON'},finish_reason:'stop'}]})+'\n\n',{headers:{'Content-Type':'text/event-stream'}}),200,headers);assert.equal(events.at(-1).type,'error');assert(!events.some(x=>x.type==='done'));
+ let aborted=false;const response=await handleCloudflare(new Request(origin+'/api/lookup',{method:'POST',headers:{...headers,Origin:origin,Cookie:client.cookie,'Content-Type':'application/json','X-ContextFlow-Client':client.token},body:JSON.stringify(body)}),env,async(url,options)=>new Response(new ReadableStream({start(controller){options.signal.addEventListener('abort',()=>{aborted=true;controller.error(new DOMException('cancelled','AbortError'));},{once:true});}}),{headers:{'Content-Type':'text/event-stream'}}));await response.body.cancel();await new Promise(r=>setImmediate(r));assert.equal(aborted,true);env.CONTEXTFLOW_DB.sqlite.close();
+});
