@@ -4,3 +4,6 @@ public/
 .dev.vars
 .dev.vars.*
 !.dev.vars.example
+.deploy-private/
+wrangler.json
+wrangler.toml

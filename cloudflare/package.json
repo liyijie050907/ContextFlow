@@ -1,1 +1,15 @@
-{"name":"contextflow-cloudflare","version":"0.18.0","private":true,"type":"module","scripts":{"build":"node build.mjs","dev":"wrangler pages dev public --compatibility-date=2025-09-01 --compatibility-flags=nodejs_compat --d1=CONTEXTFLOW_DB=local-contextflow --port=8788","check":"wrangler pages functions build --compatibility-date=2025-09-01 --compatibility-flags=nodejs_compat --outdir=.wrangler/compiled"},"devDependencies":{"wrangler":"4.160.1"}}
+{
+  "name": "contextflow-cloudflare",
+  "version": "0.18.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "wrangler pages dev public --compatibility-date=2025-09-01 --compatibility-flags=nodejs_compat --d1=CONTEXTFLOW_DB=local-contextflow --port=8788",
+    "check": "wrangler pages functions build --compatibility-date=2025-09-01 --compatibility-flags=nodejs_compat --outdir=.wrangler/compiled"
+  },
+  "devDependencies": {
+    "smol-toml": "1.9.1",
+    "wrangler": "4.160.1"
+  }
+}

@@ -16,8 +16,10 @@
 
 常见服务商直接选择名称、填写 API Key、获取模型后选择；自定义中转接口再填写地址和协议。模型目录读取不发送推理请求。Windows 本地版支持 ChatGPT 套餐登录，授权地址失败会保留错误，登录成功后可获取套餐模型；自部署版继续使用独立会话的模型 API。
 
-## 纯 Cloudflare 部署（0.18.0）
+## 一键更新 Cloudflare（Windows）
 
-沿用现有 Pages 项目：根目录 `cloudflare`，构建命令 `npm run build`，输出目录 `public`；绑定 D1 数据库 `CONTEXTFLOW_DB`，添加加密 Secret `CONTEXTFLOW_MASTER_KEY`，启用 `nodejs_compat`（兼容日期 2025-09-01 或更新），然后重新部署。完整操作见 [cloudflare/README.md](cloudflare/README.md)。本方案使用 Pages Functions，无需 Node 服务器，不提供本机 GPT 套餐登录；通过 API Key 读取模型目录、查询词义并准备阅读缓存。
+下载整合包并完整解压，双击根目录 `一键更新网站.cmd`，在自动打开的 Cloudflare 网页登录并允许授权，等待“更新成功”。脚本会识别原网址 `contextflow-bgk.pages.dev`，自动配置数据库、保留或生成加密密钥、编译后台并上传；无需手动填 D1、Secret、兼容标志或构建目录。原学习数据不变。后续重复运行同一脚本即可更新。
 
-`/api/session` 返回 HTML 或 `Unexpected token '<'` 表示仍在使用纯静态部署。不要更换 Key 来处理这个路由错误，应检查 Functions 是否已构建和绑定。学习数据继续保存在原网址的浏览器中，更新前先导出完整备份。
+没有 Node.js 时从官方 nodejs.org 下载并校验便携版；首次运行需要联网准备官方工具。脚本不自动处理 Cloudflare 登录授权，也不显示 Cloudflare 访问令牌。配置备份在 `cloudflare/.deploy-private`，不要分享或提交。只对原网址对应项目操作，找不到时停止，不创建别的网站。
+
+详细排查和其他平台手动配置见 [cloudflare/README.md](cloudflare/README.md)。Cloudflare 版通过 API Key 查询与缓存，不提供本机 GPT 套餐登录。
