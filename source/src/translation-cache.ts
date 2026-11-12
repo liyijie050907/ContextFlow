@@ -1,0 +1,7 @@
+const storageKey='contextflow-translation-cache-v1',ttl=30*86400000;type Entry={text:string;translation:string;at:number};let entries:Entry[]|undefined;
+export const translationKey=(text:string)=>text.normalize('NFKC').replace(/\s+/g,' ').trim();
+function load(){if(entries)return entries;try{const raw=JSON.parse(localStorage.getItem(storageKey)||'[]');entries=Array.isArray(raw)?raw.filter(e=>typeof e?.text==='string'&&e.text.length<=12000&&typeof e.translation==='string'&&e.translation.trim()&&e.translation.length<=24000&&typeof e.at==='number'&&Date.now()-e.at<ttl).slice(-48):[];}catch{entries=[];}return entries;}
+export function cachedTranslation(text:string){const key=translationKey(text);return load().find(e=>e.text===key&&Date.now()-e.at<ttl)?.translation;}
+export function cacheTranslation(text:string,translation:string){const key=translationKey(text);if(!key||key.length>12000||!translation.trim()||translation.length>24000)return;entries=[...load().filter(e=>e.text!==key&&Date.now()-e.at<ttl),{text:key,translation,at:Date.now()}].slice(-48);while(entries.length>1&&JSON.stringify(entries).length>1000000)entries.shift();try{localStorage.setItem(storageKey,JSON.stringify(entries));}catch{}}
+export function clearTranslationCache(){entries=[];try{localStorage.removeItem(storageKey);}catch{}}
+if(typeof window!=='undefined')window.addEventListener('storage',event=>{if(event.key===storageKey)entries=undefined;});

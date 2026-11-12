@@ -1,0 +1,4 @@
+node_modules/
+../assistant/user-data/
+*.dpapi
+*.log

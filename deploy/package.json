@@ -1,0 +1,1 @@
+{"name":"contextflow-self-hosted","version":"0.16.0","private":true,"type":"module","engines":{"node":">=24"},"scripts":{"setup":"node setup.mjs","start":"node --env-file=.env server.mjs"}}

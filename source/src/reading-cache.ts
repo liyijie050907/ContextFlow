@@ -1,0 +1,42 @@
+import type {Article} from './types';
+import type {LookupValue} from './lookup-cache';
+import {lookupKey,lookupContext} from './lookup-cache';
+const normalized=(text:string)=>text.normalize('NFKC').replace(/\s+/g,' ').trim();
+export type ReadingEntry={id:string;word:string;context:string;key:string};
+export type ReadingSentence={id:string;en:string;start:number;end:number;paragraph:number};
+export type ReadingPlan={key:string;source:string;articleId:string;entries:ReadingEntry[];sentences:ReadingSentence[];paragraphs?:ReadingSentence[];text:string};
+export type ReadingRecord={key:string;source:string;words:Record<string,string>;sentences:Record<string,string>;at:number};
+export type PreparationJob={entries:ReadingEntry[];sentences:ReadingSentence[]};
+let database:Promise<IDBDatabase>|undefined,active:{plan:ReadingPlan;record:ReadingRecord}|undefined;
+const meanings=new Map<string,LookupValue>();
+function db(){return database||=new Promise<IDBDatabase>((resolve,reject)=>{if(typeof indexedDB==='undefined'){reject(Error('IndexedDB unavailable'));return;}const request=indexedDB.open('ContextFlow-reading-cache-v1',1);request.onupgradeneeded=()=>request.result.createObjectStore('articles');request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});}
+export function sentenceParts(text:string){const segmenter=new Intl.Segmenter('en',{granularity:'sentence'});return [...segmenter.segment(text)].map(x=>({en:x.segment.trim(),start:x.index+x.segment.length-x.segment.trimStart().length,end:x.index+x.segment.trimEnd().length})).filter(x=>x.en);}
+function fingerprint(text:string){let hash=2166136261;for(let i=0;i<text.length;i++)hash=Math.imul(hash^text.charCodeAt(i),16777619);return (hash>>>0).toString(16);}
+export function readingPlan(article:Article,own:(word:string,context:string)=>boolean,useDOM=true):ReadingPlan{
+ const source=JSON.stringify(article.paragraphs.map(p=>[p.en,p.zh])),entries:ReadingEntry[]=[],sentences:ReadingSentence[]=[],seen=new Set<string>();let globalOffset=0;
+ article.paragraphs.forEach((paragraph,index)=>{const parts=sentenceParts(paragraph.en),canonical=normalized(paragraph.en);let searchFrom=0;for(const sentence of parts){const en=normalized(sentence.en),offset=canonical.indexOf(en,searchFrom);sentences.push({id:'s'+sentences.length,en,start:globalOffset+offset,end:globalOffset+offset+en.length,paragraph:index});searchFrom=Math.max(searchFrom,offset+en.length);}
+  const p=!useDOM||typeof document==='undefined'?null:document.querySelector(`[data-paragraph="${index}"]`);const tokens:{word:string;start:number}[]=[];
+  if(p){let offset=0;for(const node of p.childNodes){if(node instanceof HTMLElement&&node.dataset.word)tokens.push({word:node.dataset.word,start:offset});offset+=node.textContent?.length||0;}}
+  else for(const match of paragraph.en.matchAll(/[A-Za-z]+(?:['’-][A-Za-z]+)*/g))tokens.push({word:match[0],start:match.index!});
+  for(const token of tokens){const sentence=parts.find(x=>token.start>=x.start&&token.start<x.end)?.en||paragraph.en;const context=lookupContext(token.word,sentence),key=lookupKey(token.word,context);if(seen.has(key)||own(token.word,context))continue;seen.add(key);entries.push({id:'w'+entries.length,word:token.word,context,key});}
+  globalOffset+=canonical.length+1;
+ });
+ return {key:article.id+'-'+fingerprint(source),source,articleId:article.id,entries,sentences,paragraphs:article.paragraphs.filter(p=>!p.zh||p.zh.startsWith('本段未提供译文')).map((p,i)=>({id:'p'+i,en:p.en,start:0,end:0,paragraph:i})),text:article.paragraphs.map(p=>normalized(p.en)).join(' ')};
+}
+export function contextForWordNode(anchor:HTMLElement|undefined,fallback:string){if(!anchor?.classList.contains('word'))return fallback;const p=anchor.closest('[data-paragraph]');if(!p)return fallback;let offset=0;for(const node of p.childNodes){if(node===anchor)break;offset+=node.textContent?.length||0;}return sentenceParts(fallback).find(x=>offset>=x.start&&offset<x.end)?.en||fallback;}
+export async function loadReadingRecord(plan:ReadingPlan,activate=true){let record:ReadingRecord|undefined;try{const database=await db();record=await new Promise((resolve,reject)=>{const request=database.transaction('articles').objectStore('articles').get(plan.key);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});}catch{}if(!record||record.source!==plan.source)record={key:plan.key,source:plan.source,words:{},sentences:{},at:Date.now()};hydrateReading(plan,record,activate);return record;}
+export function hydrateReading(plan:ReadingPlan,record:ReadingRecord,activate=true){if(activate||active?.plan.key===plan.key)active={plan,record};if(meanings.size>10000)meanings.clear();for(const entry of plan.entries){const meaning=record.words[entry.key];if(typeof meaning==='string'&&meaning.trim())meanings.set(entry.key,{lemma:entry.word,meaning,pos:'',explanation:'',example:'',exampleZh:''});}}
+export async function saveReadingRecord(record:ReadingRecord){try{const database=await db();await new Promise<void>((resolve,reject)=>{const transaction=database.transaction('articles','readwrite');transaction.objectStore('articles').put(record,record.key);transaction.oncomplete=()=>resolve();transaction.onerror=transaction.onabort=()=>reject(transaction.error);});return true;}catch{return false;}}
+export function preparedLookup(word:string,context:string){return meanings.get(lookupKey(word,lookupContext(word,context)));}
+export function preparationJobs(plan:ReadingPlan,record:ReadingRecord){const entries=plan.entries.filter(x=>!record.words[x.key]),sentences=[...plan.sentences,...(plan.paragraphs||[])].filter(x=>!record.sentences[x.id]);const count=Math.max(Math.ceil(entries.length/24),Math.ceil(sentences.length/6));return Array.from({length:count},(_,i)=>({entries:entries.slice(i*24,(i+1)*24),sentences:sentences.slice(i*6,(i+1)*6)}));}
+export function mergePrepared(job:PreparationJob,result:{entries:{id:string;meaning:string}[];sentences:{id:string;zh:string}[]},record:ReadingRecord){
+ if(!Array.isArray(result?.entries)||!Array.isArray(result?.sentences))throw Error('预缓存结果格式不完整');const words=new Map(result.entries.map(x=>[x.id,x.meaning])),sentences=new Map(result.sentences.map(x=>[x.id,x.zh]));
+ for(const entry of job.entries)if(typeof words.get(entry.id)!=='string'||!words.get(entry.id)!.trim())throw Error('词义缓存漏项，尚不能进入已就绪状态');for(const sentence of job.sentences)if(typeof sentences.get(sentence.id)!=='string'||!sentences.get(sentence.id)!.trim())throw Error('句子译文缓存漏项');
+ for(const entry of job.entries)record.words[entry.key]=words.get(entry.id)!;for(const sentence of job.sentences)record.sentences[sentence.id]=sentences.get(sentence.id)!;record.at=Date.now();
+}
+export function preparedSelection(text:string){if(!active)return;const {plan,record}=active,key=normalized(text),start=plan.text.indexOf(key);if(!key||start<0)return;const end=start+key.length,matches=plan.sentences.filter(s=>s.end>start&&s.start<end);if(!matches.length||matches.some(s=>!record.sentences[s.id]))return;const exact=normalized(matches.map(s=>s.en).join(' '))===key;return {text:matches.map(s=>record.sentences[s.id]).join('\n'),exact,english:matches.map(s=>s.en).join(' ')};}
+export async function clearReadingCache(){active=undefined;meanings.clear();try{const database=await db();await new Promise<void>((resolve,reject)=>{const transaction=database.transaction('articles','readwrite');transaction.objectStore('articles').clear();transaction.oncomplete=()=>resolve();transaction.onerror=()=>reject(transaction.error);});}catch{}}
+
+export function cachedParagraph(en:string){if(!active)return '';const paragraph=active.plan.paragraphs?.find(p=>normalized(p.en)===normalized(en));if(paragraph&&active.record.sentences[paragraph.id])return active.record.sentences[paragraph.id];const matches=active.plan.sentences.filter(s=>s.en&&normalized(en).includes(normalized(s.en)));if(!matches.length||normalized(matches.map(s=>s.en).join(' '))!==normalized(en)||matches.some(s=>!active!.record.sentences[s.id]))return '';return matches.map(s=>active!.record.sentences[s.id]).join(' ');}
+let activation=0;
+export async function activateReading(article:Article,own:(w:string,c:string)=>boolean){const sequence=++activation,plan=readingPlan(article,own,false),record=await loadReadingRecord(plan,false);if(sequence!==activation)return;hydrateReading(plan,record);document.dispatchEvent(new CustomEvent('cf-reading-ready'));}

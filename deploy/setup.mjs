@@ -1,0 +1,2 @@
+import {randomBytes} from 'node:crypto';import {writeFile} from 'node:fs/promises';
+try{await writeFile(new URL('.env',import.meta.url),'PUBLIC_ORIGIN=http://localhost:8080\nPORT=8080\nCONTEXTFLOW_MASTER_KEY='+randomBytes(32).toString('hex')+'\n',{flag:'wx',mode:0o600});console.log('Created .env. For public hosting, set PUBLIC_ORIGIN to your exact HTTPS origin.');}catch(e){if(e.code==='EEXIST')console.log('.env exists; preserved.');else throw e;}

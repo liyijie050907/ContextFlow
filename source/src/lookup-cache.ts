@@ -1,0 +1,10 @@
+export type LookupValue={lemma:string;meaning:string;pos:string;explanation:string;example:string;exampleZh:string};
+const storageKey='contextflow-fast-lookup-v1',maxEntries=300,ttl=30*86400000;type Entry={key:string;value:LookupValue;at:number};let entries:Entry[]|undefined;
+export function lookupKey(word:string,context:string){return word.normalize('NFKC').trim()+'\n'+context.normalize('NFKC').replace(/\s+/g,' ').trim();}
+export function lookupContext(word:string,context:string){if(context.length<=650)return context;const index=context.toLowerCase().indexOf(word.toLowerCase());if(index<0)return context.slice(0,650);return context.slice(Math.max(0,index-220),Math.min(context.length,index+word.length+350));}
+function valid(value:unknown):value is LookupValue{return !!value&&typeof value==='object'&&['lemma','meaning','pos','explanation','example','exampleZh'].every(key=>typeof (value as any)[key]==='string'&&(value as any)[key].length<=12000)&&!!(value as LookupValue).meaning.trim();}
+function load(){if(entries)return entries;try{const raw=JSON.parse(localStorage.getItem(storageKey)||'[]');entries=Array.isArray(raw)?raw.filter(e=>typeof e?.key==='string'&&e.key.length<=1800&&typeof e.at==='number'&&Date.now()-e.at<ttl&&valid(e.value)).slice(-maxEntries):[];}catch{entries=[];}return entries;}
+export function cachedLookup(key:string){const list=load();const entry=list.find(e=>e.key===key&&Date.now()-e.at<ttl);return entry?.value;}
+export function cacheLookup(key:string,value:LookupValue){if(!valid(value)||key.length>1800)return;entries=[...load().filter(e=>e.key!==key&&Date.now()-e.at<ttl),{key,value,at:Date.now()}].slice(-maxEntries);try{localStorage.setItem(storageKey,JSON.stringify(entries));}catch{/* Session cache remains usable when storage is full. */}}
+export function clearLookupCache(){entries=[];try{localStorage.removeItem(storageKey);}catch{}}
+if(typeof window!=='undefined')window.addEventListener('storage',event=>{if(event.key===storageKey)entries=undefined;});

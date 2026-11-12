@@ -1,0 +1,17 @@
+[
+  {
+    "id": "cf-in-that",
+    "lemma": "in that",
+    "ipa": {},
+    "senses": [
+      {
+        "id": "s-in-that",
+        "pos": "conj.",
+        "en": "because; in the respect that",
+        "zh": "因为；由于；在于（引出原因或说明某一方面）",
+        "source": "contextflow-original",
+        "status": "补充短语 · 可由用户词义覆盖"
+      }
+    ]
+  }
+]

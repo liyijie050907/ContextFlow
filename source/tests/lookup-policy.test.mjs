@@ -1,0 +1,2 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {quickLookupOptions} from '../../assistant/lookup-policy.mjs';
+test('quick lookup uses low reasoning only for documented compatible models',()=>{assert.deepEqual(quickLookupOptions('gpt-6.1-sol'),{reasoning:{effort:'low'}});assert.deepEqual(quickLookupOptions('gpt-6-luna'),{reasoning:{effort:'low'}});assert.deepEqual(quickLookupOptions('unknown-or-legacy-model'),{});assert.deepEqual(quickLookupOptions('synthetic-model'),{});});
