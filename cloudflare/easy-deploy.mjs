@@ -2,10 +2,12 @@ import {spawn} from 'node:child_process';
 import {readFile,writeFile,mkdir,access} from 'node:fs/promises';
 import {dirname,resolve} from 'node:path';import {fileURLToPath} from 'node:url';import {randomBytes} from 'node:crypto';
 
+export function usableConfig(value){const copy=structuredClone(value);for(const item of [copy,...Object.values(copy.env||{})])if(item.placement&&Object.keys(item.placement).length===0)delete item.placement;return copy;}
+
 export function deploymentConfig(original,project,database){
  const production={...original,...original.env?.production};delete production.env;
  const update={pages_build_output_dir:'./public',compatibility_date:production.compatibility_date>='2025-09-01'?production.compatibility_date:'2025-09-01',compatibility_flags:[...new Set([...(production.compatibility_flags||[]),'nodejs_compat'])],d1_databases:[...(production.d1_databases||[]).filter(x=>x.binding!=='CONTEXTFLOW_DB'),{binding:'CONTEXTFLOW_DB',database_name:database.name,database_id:database.uuid}]};
- return {...production,...update,name:project,env:{...original.env,production:{...original.env?.production,...update}}};
+ return usableConfig({...production,...update,name:project,env:{...original.env,production:{...original.env?.production,...update}}});
 }
 export async function deployWorkflow(io,projectName='contextflow-bgk'){
  if(!/^[a-z0-9][a-z0-9-]{0,57}$/.test(projectName))throw Error('网站项目名无效');
@@ -36,6 +38,8 @@ export async function deployWorkflow(io,projectName='contextflow-bgk'){
 export async function main(){
  const root=dirname(fileURLToPath(import.meta.url)),wrangler=resolve(root,'node_modules/wrangler/bin/wrangler.js'),privateDir=resolve(root,'.deploy-private');
  await mkdir(privateDir,{recursive:true});
+ // Older dashboard exports include placement:{}, which Wrangler refuses.
+ const localConfig=resolve(root,'wrangler.json');try{const raw=await readFile(localConfig,'utf8'),fixed=usableConfig(JSON.parse(raw));if(JSON.stringify(JSON.parse(raw))!==JSON.stringify(fixed)){await writeFile(resolve(privateDir,'before-config-repair.json'),raw,{mode:0o600});await writeFile(localConfig,JSON.stringify(fixed,null,2));}}catch(error){if(error.code!=='ENOENT')throw error;}
  const run=(executable,args,{cwd=root,input,interactive=false,account}={})=>new Promise((resolvePromise,reject)=>{let stdout='';const child=spawn(executable,args,{cwd,windowsHide:true,shell:false,env:{...process.env,NO_COLOR:'1',WRANGLER_SEND_METRICS:'false',WRANGLER_WRITE_LOGS:'false',WRANGLER_LOG_SANITIZE:'true',...(account?{CLOUDFLARE_ACCOUNT_ID:account}:{})},stdio:interactive?'inherit':['pipe','pipe','pipe']});if(!interactive){child.stdout.on('data',b=>stdout+=b);child.stderr.on('data',()=>{});child.stdin.end(input);}child.on('error',()=>reject(Error('启动部署工具失败，请检查网络后重试。')));child.on('close',code=>code===0?resolvePromise(stdout):reject(Error('Cloudflare 操作未完成（'+args.filter(x=>!x.startsWith('--')).slice(0,3).join(' ')+'）。请检查网络、登录权限后重新运行；已有配置会沿用。')));});
  try{await access(wrangler);await access(resolve(root,'node_modules/smol-toml'));}catch{console.log('首次运行正在准备官方部署工具，请稍候…');const npmCli=resolve(dirname(process.execPath),'node_modules/npm/bin/npm-cli.js');await run(process.execPath,[npmCli,'ci','--no-audit','--no-fund'],{interactive:true});}
  const {parse}=await import('smol-toml');
