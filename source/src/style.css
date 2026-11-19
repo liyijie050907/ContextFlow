@@ -27,3 +27,177 @@
 .service-settings label{display:grid;gap:8px;margin:16px 0}.service-settings select{width:100%;min-width:0;max-width:100%}
 
 #reading-cache-status{position:fixed;bottom:20px;right:20px;z-index:30;max-width:min(430px,calc(100vw - 32px));padding:16px 20px;background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:var(--radius);font-size:12px}#reading-cache-status p{margin:0 0 8px}#reading-cache-status .button-row{gap:12px}@media(max-width:700px){#reading-cache-status{bottom:80px;right:16px}}
+
+/* Reading desk */
+.reading-desk {
+  --book-type: Georgia, "Noto Serif SC", "Songti SC", SimSun, serif;
+  max-width: 1512px;
+}
+.reading-desk .page-heading { margin-bottom: 26px; }
+.reading-desk .page-heading h1 { font-size: 32px; letter-spacing: -.025em; }
+.reading-desk .page-heading p { font-size: 13px; }
+.reading-desk .heading-actions .btn { min-height: 44px; font-size: 13px; }
+.reading-desk .btn svg { width: 17px; height: 17px; }
+.reading-start {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, .95fr);
+  align-items: center;
+  column-gap: 5%;
+  padding: 42px 5.5%;
+  background: var(--soft);
+  border-block-start: 2px solid var(--accent);
+}
+.start-copy h2 {
+  color: var(--accent-hover);
+  font: 600 52px/1.23 var(--book-type);
+  letter-spacing: -.03em;
+}
+.start-copy p { max-width: 29em; margin-top: 17px; font-size: 14px; line-height: 1.85; overflow-wrap: anywhere; }
+.start-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 25px; }
+.start-actions .btn { min-height: 46px; padding-inline: 19px; font-size: 14px; }
+.book-engraving { display: block; width: min(100%, 420px); height: auto; justify-self: center; mix-blend-mode: multiply; }
+[data-theme=dark] .book-engraving { mix-blend-mode: normal; filter: brightness(.8); }
+.reading-guide { margin-top: 32px; }
+.reading-guide h2 { font-size: 19px; }
+.reading-guide ol {
+  counter-reset: reading-step;
+  list-style: none;
+  padding: 0;
+  margin: 15px 0 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 26px;
+}
+.reading-guide li {
+  counter-increment: reading-step;
+  display: flex;
+  align-items: baseline;
+  gap: 15px;
+  padding: 18px 0 0;
+  border-top: 1px solid var(--line);
+}
+.reading-guide li::before {
+  content: counter(reading-step, decimal-leading-zero) / "";
+  flex: none;
+  font: italic 24px/1 Georgia, serif;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.reading-guide h3 { font-size: 16px; }
+.reading-guide p { max-width: 23em; margin-top: 7px; font-size: 13px; line-height: 1.8; color: var(--muted); }
+.reading-desk .reading-controls {
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 0 0 14px;
+  margin: 0 0 18px;
+}
+.reading-desk .select-field { min-width: 0; font-size: 13px; }
+.reading-desk .select-field select {
+  min-height: 44px;
+  max-width: min(240px, 46vw);
+  font-size: 13px;
+  border: 1px solid var(--line);
+  background-color: var(--paper);
+  padding-inline: 9px;
+}
+.match-count { margin-left: auto; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.reading-desk .page-heading p:empty { display: none; }
+.reading-desk .generated-navigation { min-width: 0; margin: 0 0 0 auto; border: 0; border-radius: 0; padding: 0; background: transparent; }
+.generated-navigation .batch-select { display: none; }
+.generated-navigation.batch-long .batch-select { display: flex; }
+.reading-desk .generated-navigation .btn { min-height: 44px; font-size: 12px; }
+.reading-desk .reading-paper {
+  border: 1px solid var(--line);
+  border-top: 2px solid var(--accent);
+  border-radius: 0;
+  padding-block: 32px 22px;
+  overflow-wrap: anywhere;
+}
+.reading-desk .article-title { max-width: 23ch; }
+.reading-desk .article-meta { font-size: 12px; margin-bottom: 14px; }
+.reading-desk .article-subtitle { line-height: 1.7; }
+.reading-desk .reading-tools { flex-wrap: wrap; padding-block: 8px; }
+.reading-desk .reading-tools > span { font-size: 12px; max-width: 100%; }
+.reading-desk .reading-tools .icon-btn, .reading-desk .reading-tools .text-btn,
+.reading-desk .paragraph-actions .text-btn, .reading-desk .translation summary {
+  min-height: 44px;
+  font-size: 12px;
+}
+.reading-desk .reading-tools .icon-btn { min-width: 44px; }
+.reading-desk .article-body { margin-inline: auto; }
+.reading-desk .paragraph { margin-bottom: 28px; }
+.reading-desk .learning-rail { display: block; padding-top: 0; border-top: 2px solid var(--accent); }
+.reading-desk .rail-title {
+  min-height: 52px;
+  gap: 10px;
+  justify-content: flex-start;
+  list-style: none;
+  cursor: pointer;
+}
+.rail-title::-webkit-details-marker { display: none; }
+.reading-desk .rail-title > span { padding: 0; border-radius: 0; background: transparent; }
+.reading-desk .rail-title > span:first-child { color: var(--ink); font-size: 16px; font-weight: 600; }
+.reading-desk .rail-title .target-count { margin-left: auto; color: var(--accent); font: 20px/1 Georgia,serif; }
+.reading-desk .rail-title svg { width: 16px; height: 16px; color: var(--muted); }
+.learning-rail[open] .rail-title svg { transform: rotate(180deg); }
+.reading-desk .rail-help { margin-top: 0; font-size: 12px; }
+.reading-desk .target-list { margin-top: 12px; }
+.reading-desk .target-list button { overflow-wrap: anywhere; }
+.reading-desk .target-list strong { font-size: 19px; }
+.reading-desk .target-list small { font-size: 12px; }
+.reading-desk .rail-note { border-radius: 0; }
+
+@media (min-width: 1600px) {
+  .reading-start { padding-block: 54px; }
+  .start-copy h2 { font-size: 60px; }
+}
+@media (max-width: 1100px) {
+  .start-copy h2 { font-size: 43px; }
+  .reading-start { padding: 32px 5%; }
+  .reading-guide ol { gap: 17px; }
+  .reading-guide li { gap: 10px; }
+}
+@media (max-width: 1000px) {
+  .reading-desk .reading-layout { gap: 14px; }
+  .reading-desk .learning-rail { grid-row: 1; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .reading-desk .learning-rail[open] { padding-bottom: 16px; }
+  .reading-desk .learning-rail[open] .target-list { max-height: 42vh; overflow-y: auto; }
+}
+@media (max-width: 760px) {
+  .reading-desk:has(.reading-paper) .page-heading > div:first-child { flex: 1 0 auto; }
+  .reading-desk .generated-navigation .batch-select { display: flex; }
+  .reading-desk .generated-navigation .batch-links, .reading-desk .generated-navigation .batch-caption { display: none; }
+  .reading-desk .select-field select { max-width: 35vw; }
+  .reading-desk .page-heading { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-bottom: 18px; }
+  .reading-desk .page-heading > div:first-child { flex: 1 1 185px; min-width: 0; }
+  .reading-desk .page-heading h1 { font-size: 26px; }
+  .reading-desk .page-heading p { font-size: 12px; margin-top: 7px; }
+  .reading-desk .heading-actions { margin: 0; flex-wrap: wrap; }
+  .reading-desk .heading-actions .btn { padding-inline: 10px; font-size: 12px; }
+  .reading-start { padding: 26px; }
+  .reading-guide { margin-top: 24px; }
+  .reading-guide ol { gap: 0; grid-template-columns: 1fr; margin-top: 10px; }
+  .reading-guide li { padding: 13px 0; gap: 15px; }
+  .reading-guide li::before { font-size: 22px; }
+  .reading-guide p { max-width: none; margin-top: 3px; }
+  .reading-desk .reading-paper { padding: 23px 18px 16px; margin-inline: 0; }
+  .reading-desk .article-title { font-size: 34px; }
+  .reading-desk .article-meta { font-size: 11px; }
+  .reading-desk .reading-tools { gap: 2px; margin-top: 16px; }
+  .reading-desk .reading-tools > span { width: 100%; }
+  .reading-desk .reading-tools > div { justify-content: flex-start; }
+  .reading-desk .article-pagination { font-size: 12px; }
+}
+@media (max-width: 520px) {
+  .reading-start { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 0 8px; padding: 24px 18px; }
+  .start-copy { display: contents; }
+  .start-copy h2 { grid-area: 1 / 1; font-size: 30px; }
+  .book-engraving { grid-area: 1 / 2; }
+  .start-copy p, .start-actions { grid-column: 1 / -1; }
+  .start-copy p { font-size: 13px; margin-top: 15px; }
+  .start-actions { margin-top: 17px; }
+  .start-actions .btn { min-height: 44px; font-size: 13px; padding-inline: 13px; }
+}
+@media (max-width: 360px) {
+  .start-copy h2 { font-size: 25px; }
+}

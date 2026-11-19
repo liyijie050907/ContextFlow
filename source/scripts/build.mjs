@@ -5,7 +5,7 @@ import {fileURLToPath} from 'node:url';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const output=resolve(root,'..');
 await build({entryPoints:[resolve(root,'src/generation.ts')],bundle:true,outfile:resolve(output,'assistant/generation-core.mjs'),format:'esm',platform:'node',target:'node24',legalComments:'inline'});
-const result=await build({entryPoints:[resolve(root,'src/app.ts')],bundle:true,write:false,format:'iife',target:'es2022',minify:true,legalComments:'inline'});
+const result=await build({entryPoints:[resolve(root,'src/app.ts')],bundle:true,write:false,format:'iife',target:'es2022',loader:{'.webp':'dataurl'},minify:true,legalComments:'inline'});
 const css=await readFile(resolve(root,'src/style.css'),'utf8');
 const dictionary=JSON.parse(await readFile(resolve(output,'data/dictionary.json'),'utf8'));
 for(const row of JSON.parse(await readFile(resolve(root,'scripts/phrase-supplements.json'),'utf8'))){if(!dictionary.some(x=>x.id===row.id))dictionary.push(row);}
