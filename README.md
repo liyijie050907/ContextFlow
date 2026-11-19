@@ -1,6 +1,6 @@
 # ContextFlow（语境流）
 
-一个语境流背单词
+阅读中点击单词查词，或划选一段英文查看译文。浮窗可拖动，方向键可移动位置。词卡和选段收藏到本机生词本。词汇库卡片右上角的书签和词义卡中的收藏按钮可以再次点击取消。导入时可粘贴如 `gene n. 基因` 的词条，或提供带词性列的表格。缺少词性的词条可按需用已连接的模型补全。双击 HTML 使用时，这项操作通过本机助手窗口返回词性。
 
 基于个人词汇表的英语阅读工具。创建词汇表、导出文章生成请求、导入自行生成的多篇文章；支持 AI 词义和译文后台缓存。
 
@@ -9,6 +9,8 @@
 ## 开发
 
 使用 Node 24：在 `source/` 运行 `npm ci`、`npm run typecheck`、`npm test`、`npm run build`。构建输出上级 `ContextFlow.html`；同步到 `index.html` 和 `deploy/public/index.html` 后再部署。Windows 本机服务需额外准备 Node 运行时，Git 仓库不提交 `node.exe` 或 `node_modules`。
+
+双击根目录的 ContextFlow.html 可离线使用。需要在线查询时，可用 Node 24 启动本机后台（在根目录运行 `node assistant/server.mjs`），并在 source 目录运行 `npm ci` 和 `npm run dev`，打开终端显示的本机地址，在设置中连接模型。
 
 用户学习数据不包含在仓库中，API Key 不应提交；示例 `.env.example` 不包含有效密钥。源码 MIT，数据版权和来源见 `licenses/`。
 

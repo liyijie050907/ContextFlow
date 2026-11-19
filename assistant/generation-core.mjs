@@ -1,10 +1,38 @@
+// src/parts-of-speech.ts
+var label = String.raw`(?:adj\.|adv\.|prep\.|pron\.|conj\.|interj\.|det\.|num\.|aux\.|art\.|phr\.|modal\b|v[ti]?\.|n\.|a\.|adj\b|adv\b|noun\b|verb\b|adjective\b|adverb\b|preposition\b|pronoun\b|conjunction\b|determiner\b|interjection\b|名词|及物动词|不及物动词|助动词|动词|形容词|副词|介词|代词|连词|限定词|数词|冠词|感叹词|短语)`;
+var tags = label + "(?:\\s*[/\uFF0F\u3001&]\\s*" + label + ")*";
+var term = "[a-zA-Z]+(?:[ '\\u2019-][a-zA-Z]+)*?";
+var tagged = new RegExp("^(" + term + ")\\s*(?:[:\uFF1A,\uFF0C\\t]\\s*|\\s+|(?=[\uFF08(\\[]))[\uFF08(\\[]?(" + tags + ")[\uFF09)\\]]?\\s*(?:[:\uFF1A,\uFF0C;\uFF1B-]\\s*|\\s+|(?=[\\u3400-\\u9fff])|$)(.*)$", "i");
+var prefix = new RegExp("^[\uFF08(\\[]?(" + tags + ")[\uFF09)\\]]?(?=\\s|[:\uFF1A,\uFF0C;\uFF1B]|[\\u3400-\\u9fff]|$)", "i");
+function parseTaggedLine(line) {
+  const match = tagged.exec(line.trim());
+  return match ? { word: match[1].trim(), pos: match[2].trim(), zh: match[3].trim() } : void 0;
+}
+function inlinePartOfSpeech(meaning) {
+  const labels = /* @__PURE__ */ new Set();
+  for (const line of meaning.split("\n")) {
+    const clean = line.trim().replace(/^(?:[-*+]\s+|\d+[.)、]\s*)/, "").replace(/^(?:\*\*|__)/, "");
+    const match = prefix.exec(clean);
+    if (match) labels.add(match[1]);
+  }
+  return [...labels].join(" / ");
+}
+function partOfSpeechHeader(name) {
+  return /^(?:pos|part[_\s-]*of[_\s-]*speech|词性)$/i.test(name.trim());
+}
+function meaningfulPos(value) {
+  const clean = value?.trim() || "";
+  return /^(?:未注明|未标注|未知|unknown|n\/a|—|-)$/i.test(clean) ? "" : clean;
+}
+
 // src/markdown.ts
 function parseMarkdownVocabulary(input) {
   const words = [];
   const invalid = [];
   let current;
-  const add = (word, meaning, emphasized) => {
-    current = { word, zh: meaning, emphasized };
+  let posIndex = -1;
+  const add = (word, meaning, emphasized, pos) => {
+    current = { word, zh: meaning, emphasized, pos };
     words.push(current);
   };
   for (const original of input.split(/\r?\n/)) {
@@ -12,10 +40,14 @@ function parseMarkdownVocabulary(input) {
     if (!line || /^```/.test(line) || /^\s*[-*_]{3,}\s*$/.test(line)) continue;
     if (line.startsWith("|")) {
       const cells = line.replace(/^\||\|$/g, "").split(/(?<!\\)\|/).map((c) => c.trim());
-      if (cells.every((c) => /^:?-+:?$/.test(c)) || /^(单词|词汇|word|lemma)$/i.test(cells[0])) continue;
+      if (/^(单词|词汇|word|lemma)$/i.test(cells[0])) {
+        posIndex = cells.findIndex(partOfSpeechHeader);
+        continue;
+      }
+      if (cells.every((c) => /^:?-+:?$/.test(c))) continue;
       const w = cells[0].replace(/[*_`]/g, "").trim();
       if (/^[A-Za-z]+(?:[ '’-][A-Za-z]+)*$/.test(w)) {
-        add(w, cells.slice(1).join(" \xB7 "), /\*\*|__/.test(cells[0]));
+        add(w, cells.filter((_, i) => i !== 0 && i !== posIndex).join(" \xB7 "), /\*\*|__/.test(cells[0]), posIndex >= 0 ? cells[posIndex] : void 0);
         continue;
       }
     }
@@ -25,6 +57,11 @@ function parseMarkdownVocabulary(input) {
     const heading = /^#{1,6}\s/.test(line) && /^[A-Za-z]+(?:[ '’-][A-Za-z]+)*$/.test(stripped) ? stripped : void 0;
     if (bold) {
       add(bold[1], bold[2], true);
+      continue;
+    }
+    const tagged2 = parseTaggedLine(stripped);
+    if (tagged2) {
+      add(tagged2.word, tagged2.zh, false, tagged2.pos);
       continue;
     }
     if (plain) {
@@ -98,13 +135,21 @@ function parseGenerationWords(text, filename = "") {
     const raw = JSON.parse(input);
     const list = Array.isArray(raw) ? raw : raw.words;
     if (!Array.isArray(list)) throw Error("JSON \u9700\u8981\u5355\u8BCD\u6570\u7EC4\uFF0C\u6216\u542B words \u6570\u7EC4\u7684\u5BF9\u8C61\u3002");
-    entries = list.map((x) => typeof x === "string" ? { word: x, zh: "" } : { word: String(x.word || x.lemma || ""), zh: String(x.zh || x.meaning || "") });
+    entries = list.map((x) => typeof x === "string" ? { word: x, zh: "" } : { word: String(x.word || x.lemma || ""), zh: String(x.zh || x.meaning || ""), pos: String(x.pos || x.partOfSpeech || x["\u8BCD\u6027"] || "") });
   } else if (/\.csv$/i.test(filename) || /^\s*(word|lemma|单词)\s*,/i.test(input)) {
-    const rows = parseCSV(input);
-    if (/^(word|lemma|单词)$/i.test(rows[0]?.[0] || "")) rows.shift();
-    entries = rows.map((row) => ({ word: row[0], zh: row[1] || "" }));
+    const rows = parseCSV(input), head = rows[0] || [], hasHeader = head.some((x) => /^(word|lemma|单词)$/i.test(x.trim()));
+    const posIndex = hasHeader ? head.findIndex(partOfSpeechHeader) : -1;
+    const wordIndex = hasHeader ? head.findIndex((x) => /^(word|lemma|单词)$/i.test(x.trim())) : 0;
+    const meaningIndex = hasHeader ? head.findIndex((x) => /^(zh|meaning|definition|中文|中文释义|释义|词义)$/i.test(x.trim())) : -1;
+    if (hasHeader) rows.shift();
+    entries = rows.map((row) => ({ word: row[wordIndex] || "", zh: row[meaningIndex >= 0 ? meaningIndex : posIndex === 1 ? 2 : 1] || "", pos: posIndex >= 0 ? row[posIndex] : void 0 }));
   } else {
     for (const line of input.split(/\r?\n/).filter((x) => x.trim())) {
+      const tagged2 = parseTaggedLine(line);
+      if (tagged2) {
+        entries.push(tagged2);
+        continue;
+      }
       const mixed = line.trim().match(/^([a-zA-Z]+(?:[ '’-][a-zA-Z]+)*)\s*[:：,，\t ]\s*([\u4e00-\u9fff].*)$/);
       if (mixed) entries.push({ word: mixed[1], zh: mixed[2] });
       else entries.push(...line.split(/[\s,，;；]+/).filter(Boolean).map((word) => ({ word, zh: "" })));
@@ -118,16 +163,22 @@ function parseGenerationWords(text, filename = "") {
       invalid.push(item.word);
       continue;
     }
+    const pos = meaningfulPos(item.pos) || inlinePartOfSpeech(item.zh);
+    if (pos.length > 100) {
+      invalid.push(word);
+      continue;
+    }
     const key = norm(word);
     if (seen.has(key)) {
       duplicates.push(word);
       const previous = words.find((w) => norm(w.word) === key);
       if (item.zh) previous.zh += "\n" + item.zh;
+      if (pos) previous.pos = [...new Set([previous.pos, pos].filter(Boolean))].join(" / ");
       previous.emphasized = previous.emphasized || item.emphasized;
       continue;
     }
     seen.add(key);
-    words.push({ word, zh: item.zh.trim(), emphasized: item.emphasized });
+    words.push({ word, zh: item.zh.trim(), emphasized: item.emphasized, ...pos ? { pos } : {} });
   }
   return { words, duplicates, invalid, overLimit: words.length > MAX_GENERATION_WORDS };
 }

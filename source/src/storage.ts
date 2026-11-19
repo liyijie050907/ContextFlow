@@ -15,6 +15,6 @@ export class StorageRepository {
   private idbGet(key:string){return new Promise<unknown>((res,rej)=>{const r=this.db!.transaction('state').objectStore('state').get(key);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
   private idbPut(value:unknown,key:string){return new Promise<void>((res,rej)=>{const tx=this.db!.transaction('state','readwrite');tx.objectStore('state').put(value,key);tx.oncomplete=()=>res();tx.onerror=tx.onabort=()=>rej(tx.error||Error('事务中断'));});}
   async commit(change:(draft:UserState)=>void){const task=this.queue.then(async()=>{const next=structuredClone(this.state);change(next);next.updatedAt=now();validateState(next);if(this.mode==='IndexedDB'){await new Promise<void>((res,rej)=>{const tx=this.db!.transaction('state','readwrite');const store=tx.objectStore('state');store.put(this.state,'previous');store.put(next,'current');tx.oncomplete=()=>res();tx.onerror=tx.onabort=()=>rej(tx.error||Error('保存事务失败'));});}else if(this.mode==='兼容存储'){localStorage.setItem(KEY,JSON.stringify(next));}this.state=next;});this.queue=task.catch(()=>{});return task;}
-  async replace(next:UserState){await this.commit(d=>Object.assign(d,structuredClone(next)));}
+  async replace(next:UserState){await this.commit(d=>Object.assign(d,{cardChecks:[]},structuredClone(next)));}
   async previous(){if(this.db)return await this.idbGet('previous') as UserState|undefined;return undefined;}
 }

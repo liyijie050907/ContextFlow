@@ -4,7 +4,7 @@ import {mkdtemp,copyFile,writeFile,readFile} from 'node:fs/promises';import {tmp
 test('isolated custom services support all learning routes and restore encrypted configuration', {skip:process.platform!=='win32',timeout:60000},async()=>{
  const root=await mkdtemp(join(tmpdir(),'ContextFlow-provider-test-')),source=resolve('../assistant');
  const probe=http.createServer();await new Promise(r=>probe.listen(0,'127.0.0.1',r));const port=probe.address().port;await new Promise(r=>probe.close(r));const base='http://127.0.0.1:'+port;
- for(const file of ['network.mjs','generation-core.mjs','lookup-policy.mjs','reading-preparation.mjs','providers.mjs'])await copyFile(join(source,file),join(root,file));
+ for(const file of ['network.mjs','generation-core.mjs','lookup-policy.mjs','reading-preparation.mjs','parts-of-speech.mjs','providers.mjs'])await copyFile(join(source,file),join(root,file));
  await writeFile(join(root,'server.mjs'),(await readFile(join(source,'server.mjs'),'utf8')).replaceAll('17863',String(port)));
  const built=await build({entryPoints:['src/generation.ts'],bundle:true,format:'esm',platform:'node',write:false});const G=await import('data:text/javascript;base64,'+Buffer.from(built.outputFiles[0].text).toString('base64'));
  const scenes=[['farmer','planted','orchard','harvest'],['engineer','measured','laboratory','instrument'],['teacher','explained','classroom','lesson'],['traveller','carried','harbour','voyage'],['curator','displayed','gallery','painting']];let protocol='chat-completions',calls=0;
@@ -16,7 +16,8 @@ test('isolated custom services support all learning routes and restore encrypted
   const messages=input.messages||input.input||input.contents;const user=messages.at(-1);const text=typeof user.content==='string'?user.content:user.parts?.map(p=>p.text).join('');let value;
   try{value=JSON.parse(text);}catch{}
   const system=String(input.system||input.systemInstruction?.parts?.[0]?.text||messages[0]?.content||'');let answer='模拟中文释义';
-  if(value?.articleIndex){const scene=scenes[value.articleIndex-1];answer=JSON.stringify({format:'ContextFlowLearningBundle',version:1,articles:[{id:'model-id',version:'1',title:scene[2]+' observations',subtitle:'Synthetic test only',topic:scene[2],mode:'CET-4',length:'长篇',source:'synthetic-test-only',paragraphs:[{en:value.requiredWords.map(w=>`The ${scene[0]} ${scene[1]} the ${w} near the ${scene[2]} during the ${scene[3]}.`).join(' '),zh:'程序测试占位译文'}],targets:[],questionIds:[]}],questions:[]});}
+  if(Array.isArray(value))answer=JSON.stringify({items:value.map(x=>({id:x.id,tags:['名词']}))});
+  else if(value?.articleIndex){const scene=scenes[value.articleIndex-1];answer=JSON.stringify({format:'ContextFlowLearningBundle',version:1,articles:[{id:'model-id',version:'1',title:scene[2]+' observations',subtitle:'Synthetic test only',topic:scene[2],mode:'CET-4',length:'长篇',source:'synthetic-test-only',paragraphs:[{en:value.requiredWords.map(w=>`The ${scene[0]} ${scene[1]} the ${w} near the ${scene[2]} during the ${scene[3]}.`).join(' '),zh:'程序测试占位译文'}],targets:[],questionIds:[]}],questions:[]});}
   else if(value?.entries&&value?.sentences)answer=JSON.stringify({entries:value.entries.map(x=>({id:x.id,meaning:'模拟预缓存词义'})),sentences:value.sentences.map(x=>({id:x.id,zh:'模拟预缓存译文'}))});
   else if(system.includes('exampleZh'))answer=JSON.stringify({lemma:'sample',meaning:'模拟词义',pos:'n.',explanation:'模拟解释',example:'A sample.',exampleZh:'一个样本。'});
   else if(text==='Reply with exactly OK.')answer='OK';
@@ -40,11 +41,12 @@ test('isolated custom services support all learning routes and restore encrypted
   assert.equal((await post('/translate-fast',{...selected,text:'A sample.'})).at(-1).type,'done');
   assert.equal((await post('/lookup',{...selected,word:'sample',context:'A sample.'})).meaning,'模拟词义');
   assert.equal((await post('/translate',{...selected,text:'A sample.'})).translation,'模拟中文释义');
+  assert.deepEqual((await post('/parts-of-speech',{...selected,items:[{word:'gene',zh:'基因'}]})).items,[{word:'gene',pos:'名词'}]);
   const prepared=await post('/prepare-reading',{...selected,entries:[{id:'w1',word:'sample',context:'A sample.'}],sentences:[{id:'s1',en:'A sample.'}]});assert.equal(prepared.entries[0].meaning,'模拟预缓存词义');
   const request=G.makeGenerationRequest({batchId:'synthetic-test-batch-'+protocol,targets:Array.from({length:10},(_,i)=>({word:'token'+String.fromCharCode(97+i),senseId:'test-sense-'+i,zh:'**测试词义**',en:''})),mode:'CET-4',topic:'多样主题（自动）',length:'按词量自动',difficulty:'中等',includeQuestions:false,recentContexts:[]});
 
  }
  await stop();await start();const restored=await post('/status');assert.equal(restored.customConfig.protocol,'gemini');assert.equal(restored.preferences.provider,'custom');assert.equal(restored.preferences.model,'vendor-model');assert(!JSON.stringify(restored).includes('synthetic-provider-key'));
- assert(!(await readFile(join(root,'user-data','credentials.dpapi'))).includes(Buffer.from('synthetic-provider-key')));assert.equal(calls,24);
+ assert(!(await readFile(join(root,'user-data','credentials.dpapi'))).includes(Buffer.from('synthetic-provider-key')));assert.equal(calls,28);
  }finally{await stop();await new Promise(r=>upstream.close(r));}
 });
