@@ -4,9 +4,10 @@ import {resolve,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const output=resolve(root,'..');
+await writeFile(resolve(output,'deploy/parts-of-speech.mjs'),await readFile(resolve(output,'assistant/parts-of-speech.mjs')));
 await build({entryPoints:[resolve(root,'src/generation.ts')],bundle:true,outfile:resolve(output,'assistant/generation-core.mjs'),format:'esm',platform:'node',target:'node24',legalComments:'inline'});
-const result=await build({entryPoints:[resolve(root,'src/app.ts')],bundle:true,write:false,format:'iife',target:'es2022',minify:true,legalComments:'inline'});
-const css=await readFile(resolve(root,'src/style.css'),'utf8');
+const result=await build({entryPoints:[resolve(root,'src/app.ts')],bundle:true,write:false,loader:{'.webp':'dataurl'},format:'iife',target:'es2022',minify:true,legalComments:'inline'});
+const css=(await Promise.all(['style.css','learning.css'].map(name=>readFile(resolve(root,'src',name),'utf8')))).join('\n');
 const dictionary=JSON.parse(await readFile(resolve(output,'data/dictionary.json'),'utf8'));
 for(const row of JSON.parse(await readFile(resolve(root,'scripts/phrase-supplements.json'),'utf8'))){if(!dictionary.some(x=>x.id===row.id))dictionary.push(row);}
 const data=JSON.stringify(dictionary);await writeFile(resolve(output,'data/dictionary.json'),data);

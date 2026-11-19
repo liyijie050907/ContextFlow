@@ -1,0 +1,661 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-19T06:37:40.560Z",
+  "title": "Design System: ContextFlow 语境流 · 阅读与词卡",
+  "extensions": {
+    "colorMeta": {
+      "light-bg": {
+        "role": "neutral",
+        "displayName": "日间 · 页面底色",
+        "canonical": "#f7f7f9",
+        "tonalRamp": [
+          "oklch(15% 0.0026 286.4)",
+          "oklch(26% 0.0026 286.4)",
+          "oklch(38% 0.0026 286.4)",
+          "oklch(49% 0.0026 286.4)",
+          "oklch(61% 0.0026 286.4)",
+          "oklch(72% 0.0026 286.4)",
+          "oklch(84% 0.0026 286.4)",
+          "oklch(95% 0.0026 286.4)"
+        ]
+      },
+      "light-paper": {
+        "role": "neutral",
+        "displayName": "日间 · 纸面",
+        "canonical": "#fff",
+        "tonalRamp": [
+          "oklch(15% 0.0000 0)",
+          "oklch(26% 0.0000 0)",
+          "oklch(38% 0.0000 0)",
+          "oklch(49% 0.0000 0)",
+          "oklch(61% 0.0000 0)",
+          "oklch(72% 0.0000 0)",
+          "oklch(84% 0.0000 0)",
+          "oklch(95% 0.0000 0)"
+        ]
+      },
+      "light-ink": {
+        "role": "neutral",
+        "displayName": "日间 · 正文",
+        "canonical": "#25242b",
+        "tonalRamp": [
+          "oklch(15% 0.0130 292.0)",
+          "oklch(26% 0.0130 292.0)",
+          "oklch(38% 0.0130 292.0)",
+          "oklch(49% 0.0130 292.0)",
+          "oklch(61% 0.0130 292.0)",
+          "oklch(72% 0.0130 292.0)",
+          "oklch(84% 0.0130 292.0)",
+          "oklch(95% 0.0130 292.0)"
+        ]
+      },
+      "light-muted": {
+        "role": "neutral",
+        "displayName": "日间 · 次要文字",
+        "canonical": "#62616d",
+        "tonalRamp": [
+          "oklch(15% 0.0189 289.5)",
+          "oklch(26% 0.0189 289.5)",
+          "oklch(38% 0.0189 289.5)",
+          "oklch(49% 0.0189 289.5)",
+          "oklch(61% 0.0189 289.5)",
+          "oklch(72% 0.0189 289.5)",
+          "oklch(84% 0.0189 289.5)",
+          "oklch(95% 0.0189 289.5)"
+        ]
+      },
+      "light-line": {
+        "role": "neutral",
+        "displayName": "日间 · 分隔线",
+        "canonical": "#dedde3",
+        "tonalRamp": [
+          "oklch(15% 0.0082 293.9)",
+          "oklch(26% 0.0082 293.9)",
+          "oklch(38% 0.0082 293.9)",
+          "oklch(49% 0.0082 293.9)",
+          "oklch(61% 0.0082 293.9)",
+          "oklch(72% 0.0082 293.9)",
+          "oklch(84% 0.0082 293.9)",
+          "oklch(95% 0.0082 293.9)"
+        ]
+      },
+      "light-accent": {
+        "role": "primary",
+        "displayName": "日间 · 强调文字与焦点",
+        "canonical": "#50417e",
+        "tonalRamp": [
+          "oklch(15% 0.0993 293.0)",
+          "oklch(26% 0.0993 293.0)",
+          "oklch(38% 0.0993 293.0)",
+          "oklch(49% 0.0993 293.0)",
+          "oklch(61% 0.0993 293.0)",
+          "oklch(72% 0.0993 293.0)",
+          "oklch(84% 0.0993 293.0)",
+          "oklch(95% 0.0993 293.0)"
+        ]
+      },
+      "light-accent-hover": {
+        "role": "primary",
+        "displayName": "日间 · 强调悬停",
+        "canonical": "#382969",
+        "tonalRamp": [
+          "oklch(15% 0.1072 290.2)",
+          "oklch(26% 0.1072 290.2)",
+          "oklch(38% 0.1072 290.2)",
+          "oklch(49% 0.1072 290.2)",
+          "oklch(61% 0.1072 290.2)",
+          "oklch(72% 0.1072 290.2)",
+          "oklch(84% 0.1072 290.2)",
+          "oklch(95% 0.1072 290.2)"
+        ]
+      },
+      "light-soft": {
+        "role": "secondary",
+        "displayName": "日间 · 选中底色",
+        "canonical": "#ebe7f6",
+        "tonalRamp": [
+          "oklch(15% 0.0205 298.2)",
+          "oklch(26% 0.0205 298.2)",
+          "oklch(38% 0.0205 298.2)",
+          "oklch(49% 0.0205 298.2)",
+          "oklch(61% 0.0205 298.2)",
+          "oklch(72% 0.0205 298.2)",
+          "oklch(84% 0.0205 298.2)",
+          "oklch(95% 0.0205 298.2)"
+        ]
+      },
+      "light-target": {
+        "role": "secondary",
+        "displayName": "日间 · 目标词背景",
+        "canonical": "#e8e0fc",
+        "tonalRamp": [
+          "oklch(15% 0.0386 298.7)",
+          "oklch(26% 0.0386 298.7)",
+          "oklch(38% 0.0386 298.7)",
+          "oklch(49% 0.0386 298.7)",
+          "oklch(61% 0.0386 298.7)",
+          "oklch(72% 0.0386 298.7)",
+          "oklch(84% 0.0386 298.7)",
+          "oklch(95% 0.0386 298.7)"
+        ]
+      },
+      "light-target-ink": {
+        "role": "secondary",
+        "displayName": "日间 · 目标词文字",
+        "canonical": "#34234f",
+        "tonalRamp": [
+          "oklch(15% 0.0785 299.5)",
+          "oklch(26% 0.0785 299.5)",
+          "oklch(38% 0.0785 299.5)",
+          "oklch(49% 0.0785 299.5)",
+          "oklch(61% 0.0785 299.5)",
+          "oklch(72% 0.0785 299.5)",
+          "oklch(84% 0.0785 299.5)",
+          "oklch(95% 0.0785 299.5)"
+        ]
+      },
+      "light-dot": {
+        "role": "neutral",
+        "displayName": "日间 · 纸张网点",
+        "canonical": "#e0dfe5",
+        "tonalRamp": [
+          "oklch(15% 0.0082 293.9)",
+          "oklch(26% 0.0082 293.9)",
+          "oklch(38% 0.0082 293.9)",
+          "oklch(49% 0.0082 293.9)",
+          "oklch(61% 0.0082 293.9)",
+          "oklch(72% 0.0082 293.9)",
+          "oklch(84% 0.0082 293.9)",
+          "oklch(95% 0.0082 293.9)"
+        ]
+      },
+      "light-purple": {
+        "role": "primary",
+        "displayName": "日间 · 主按钮底色",
+        "canonical": "#d8cef6",
+        "tonalRamp": [
+          "oklch(15% 0.0556 296.7)",
+          "oklch(26% 0.0556 296.7)",
+          "oklch(38% 0.0556 296.7)",
+          "oklch(49% 0.0556 296.7)",
+          "oklch(61% 0.0556 296.7)",
+          "oklch(72% 0.0556 296.7)",
+          "oklch(84% 0.0556 296.7)",
+          "oklch(95% 0.0556 296.7)"
+        ]
+      },
+      "light-purple-ink": {
+        "role": "primary",
+        "displayName": "日间 · 主按钮文字",
+        "canonical": "#302448",
+        "tonalRamp": [
+          "oklch(15% 0.0650 297.6)",
+          "oklch(26% 0.0650 297.6)",
+          "oklch(38% 0.0650 297.6)",
+          "oklch(49% 0.0650 297.6)",
+          "oklch(61% 0.0650 297.6)",
+          "oklch(72% 0.0650 297.6)",
+          "oklch(84% 0.0650 297.6)",
+          "oklch(95% 0.0650 297.6)"
+        ]
+      },
+      "dark-bg": {
+        "role": "neutral",
+        "displayName": "夜间 · 页面底色",
+        "canonical": "#222127",
+        "tonalRamp": [
+          "oklch(15% 0.0113 293.2)",
+          "oklch(26% 0.0113 293.2)",
+          "oklch(38% 0.0113 293.2)",
+          "oklch(49% 0.0113 293.2)",
+          "oklch(61% 0.0113 293.2)",
+          "oklch(72% 0.0113 293.2)",
+          "oklch(84% 0.0113 293.2)",
+          "oklch(95% 0.0113 293.2)"
+        ]
+      },
+      "dark-paper": {
+        "role": "neutral",
+        "displayName": "夜间 · 纸面",
+        "canonical": "#2b2931",
+        "tonalRamp": [
+          "oklch(15% 0.0147 296.9)",
+          "oklch(26% 0.0147 296.9)",
+          "oklch(38% 0.0147 296.9)",
+          "oklch(49% 0.0147 296.9)",
+          "oklch(61% 0.0147 296.9)",
+          "oklch(72% 0.0147 296.9)",
+          "oklch(84% 0.0147 296.9)",
+          "oklch(95% 0.0147 296.9)"
+        ]
+      },
+      "dark-ink": {
+        "role": "neutral",
+        "displayName": "夜间 · 正文",
+        "canonical": "#f2f0f6",
+        "tonalRamp": [
+          "oklch(15% 0.0082 301.4)",
+          "oklch(26% 0.0082 301.4)",
+          "oklch(38% 0.0082 301.4)",
+          "oklch(49% 0.0082 301.4)",
+          "oklch(61% 0.0082 301.4)",
+          "oklch(72% 0.0082 301.4)",
+          "oklch(84% 0.0082 301.4)",
+          "oklch(95% 0.0082 301.4)"
+        ]
+      },
+      "dark-muted": {
+        "role": "neutral",
+        "displayName": "夜间 · 次要文字",
+        "canonical": "#c0bbc9",
+        "tonalRamp": [
+          "oklch(15% 0.0202 302.1)",
+          "oklch(26% 0.0202 302.1)",
+          "oklch(38% 0.0202 302.1)",
+          "oklch(49% 0.0202 302.1)",
+          "oklch(61% 0.0202 302.1)",
+          "oklch(72% 0.0202 302.1)",
+          "oklch(84% 0.0202 302.1)",
+          "oklch(95% 0.0202 302.1)"
+        ]
+      },
+      "dark-line": {
+        "role": "neutral",
+        "displayName": "夜间 · 分隔线",
+        "canonical": "#48444f",
+        "tonalRamp": [
+          "oklch(15% 0.0190 302.1)",
+          "oklch(26% 0.0190 302.1)",
+          "oklch(38% 0.0190 302.1)",
+          "oklch(49% 0.0190 302.1)",
+          "oklch(61% 0.0190 302.1)",
+          "oklch(72% 0.0190 302.1)",
+          "oklch(84% 0.0190 302.1)",
+          "oklch(95% 0.0190 302.1)"
+        ]
+      },
+      "dark-accent": {
+        "role": "primary",
+        "displayName": "夜间 · 强调文字与焦点",
+        "canonical": "#cbb9ff",
+        "tonalRamp": [
+          "oklch(15% 0.0985 296.0)",
+          "oklch(26% 0.0985 296.0)",
+          "oklch(38% 0.0985 296.0)",
+          "oklch(49% 0.0985 296.0)",
+          "oklch(61% 0.0985 296.0)",
+          "oklch(72% 0.0985 296.0)",
+          "oklch(84% 0.0985 296.0)",
+          "oklch(95% 0.0985 296.0)"
+        ]
+      },
+      "dark-accent-hover": {
+        "role": "primary",
+        "displayName": "夜间 · 强调悬停",
+        "canonical": "#e1d7ff",
+        "tonalRamp": [
+          "oklch(15% 0.0552 296.7)",
+          "oklch(26% 0.0552 296.7)",
+          "oklch(38% 0.0552 296.7)",
+          "oklch(49% 0.0552 296.7)",
+          "oklch(61% 0.0552 296.7)",
+          "oklch(72% 0.0552 296.7)",
+          "oklch(84% 0.0552 296.7)",
+          "oklch(95% 0.0552 296.7)"
+        ]
+      },
+      "dark-soft": {
+        "role": "secondary",
+        "displayName": "夜间 · 选中底色",
+        "canonical": "#40374e",
+        "tonalRamp": [
+          "oklch(15% 0.0408 302.3)",
+          "oklch(26% 0.0408 302.3)",
+          "oklch(38% 0.0408 302.3)",
+          "oklch(49% 0.0408 302.3)",
+          "oklch(61% 0.0408 302.3)",
+          "oklch(72% 0.0408 302.3)",
+          "oklch(84% 0.0408 302.3)",
+          "oklch(95% 0.0408 302.3)"
+        ]
+      },
+      "dark-target": {
+        "role": "secondary",
+        "displayName": "夜间 · 目标词背景",
+        "canonical": "#544365",
+        "tonalRamp": [
+          "oklch(15% 0.0592 306.9)",
+          "oklch(26% 0.0592 306.9)",
+          "oklch(38% 0.0592 306.9)",
+          "oklch(49% 0.0592 306.9)",
+          "oklch(61% 0.0592 306.9)",
+          "oklch(72% 0.0592 306.9)",
+          "oklch(84% 0.0592 306.9)",
+          "oklch(95% 0.0592 306.9)"
+        ]
+      },
+      "dark-target-ink": {
+        "role": "secondary",
+        "displayName": "夜间 · 目标词文字",
+        "canonical": "#f9f3ff",
+        "tonalRamp": [
+          "oklch(15% 0.0171 308.3)",
+          "oklch(26% 0.0171 308.3)",
+          "oklch(38% 0.0171 308.3)",
+          "oklch(49% 0.0171 308.3)",
+          "oklch(61% 0.0171 308.3)",
+          "oklch(72% 0.0171 308.3)",
+          "oklch(84% 0.0171 308.3)",
+          "oklch(95% 0.0171 308.3)"
+        ]
+      },
+      "dark-dot": {
+        "role": "neutral",
+        "displayName": "夜间 · 纸张网点",
+        "canonical": "#46404e",
+        "tonalRamp": [
+          "oklch(15% 0.0247 304.7)",
+          "oklch(26% 0.0247 304.7)",
+          "oklch(38% 0.0247 304.7)",
+          "oklch(49% 0.0247 304.7)",
+          "oklch(61% 0.0247 304.7)",
+          "oklch(72% 0.0247 304.7)",
+          "oklch(84% 0.0247 304.7)",
+          "oklch(95% 0.0247 304.7)"
+        ]
+      },
+      "dark-purple": {
+        "role": "primary",
+        "displayName": "夜间 · 主按钮底色",
+        "canonical": "#c6b4f1",
+        "tonalRamp": [
+          "oklch(15% 0.0869 298.0)",
+          "oklch(26% 0.0869 298.0)",
+          "oklch(38% 0.0869 298.0)",
+          "oklch(49% 0.0869 298.0)",
+          "oklch(61% 0.0869 298.0)",
+          "oklch(72% 0.0869 298.0)",
+          "oklch(84% 0.0869 298.0)",
+          "oklch(95% 0.0869 298.0)"
+        ]
+      },
+      "dark-purple-ink": {
+        "role": "primary",
+        "displayName": "夜间 · 主按钮文字",
+        "canonical": "#2d203e",
+        "tonalRamp": [
+          "oklch(15% 0.0562 302.9)",
+          "oklch(26% 0.0562 302.9)",
+          "oklch(38% 0.0562 302.9)",
+          "oklch(49% 0.0562 302.9)",
+          "oklch(61% 0.0562 302.9)",
+          "oklch(72% 0.0562 302.9)",
+          "oklch(84% 0.0562 302.9)",
+          "oklch(95% 0.0562 302.9)"
+        ]
+      },
+      "peach": {
+        "role": "tertiary",
+        "displayName": "马克杯",
+        "canonical": "#f2c8bc",
+        "tonalRamp": [
+          "oklch(15% 0.0508 36.5)",
+          "oklch(26% 0.0508 36.5)",
+          "oklch(38% 0.0508 36.5)",
+          "oklch(49% 0.0508 36.5)",
+          "oklch(61% 0.0508 36.5)",
+          "oklch(72% 0.0508 36.5)",
+          "oklch(84% 0.0508 36.5)",
+          "oklch(95% 0.0508 36.5)"
+        ]
+      },
+      "honey": {
+        "role": "tertiary",
+        "displayName": "可颂面包",
+        "canonical": "#efd69e",
+        "tonalRamp": [
+          "oklch(15% 0.0773 86.7)",
+          "oklch(26% 0.0773 86.7)",
+          "oklch(38% 0.0773 86.7)",
+          "oklch(49% 0.0773 86.7)",
+          "oklch(61% 0.0773 86.7)",
+          "oklch(72% 0.0773 86.7)",
+          "oklch(84% 0.0773 86.7)",
+          "oklch(95% 0.0773 86.7)"
+        ]
+      },
+      "blue": {
+        "role": "tertiary",
+        "displayName": "照相机",
+        "canonical": "#c3d4ef",
+        "tonalRamp": [
+          "oklch(15% 0.0418 259.6)",
+          "oklch(26% 0.0418 259.6)",
+          "oklch(38% 0.0418 259.6)",
+          "oklch(49% 0.0418 259.6)",
+          "oklch(61% 0.0418 259.6)",
+          "oklch(72% 0.0418 259.6)",
+          "oklch(84% 0.0418 259.6)",
+          "oklch(95% 0.0418 259.6)"
+        ]
+      },
+      "mint": {
+        "role": "tertiary",
+        "displayName": "头戴式耳机",
+        "canonical": "#c6dfd3",
+        "tonalRamp": [
+          "oklch(15% 0.0312 165.2)",
+          "oklch(26% 0.0312 165.2)",
+          "oklch(38% 0.0312 165.2)",
+          "oklch(49% 0.0312 165.2)",
+          "oklch(61% 0.0312 165.2)",
+          "oklch(72% 0.0312 165.2)",
+          "oklch(84% 0.0312 165.2)",
+          "oklch(95% 0.0312 165.2)"
+        ]
+      },
+      "butter": {
+        "role": "tertiary",
+        "displayName": "灯",
+        "canonical": "#f1e5a9",
+        "tonalRamp": [
+          "oklch(15% 0.0780 98.2)",
+          "oklch(26% 0.0780 98.2)",
+          "oklch(38% 0.0780 98.2)",
+          "oklch(49% 0.0780 98.2)",
+          "oklch(61% 0.0780 98.2)",
+          "oklch(72% 0.0780 98.2)",
+          "oklch(84% 0.0780 98.2)",
+          "oklch(95% 0.0780 98.2)"
+        ]
+      },
+      "lilac": {
+        "role": "tertiary",
+        "displayName": "雏菊与个人文字卡",
+        "canonical": "#dcd1e9",
+        "tonalRamp": [
+          "oklch(15% 0.0347 306.3)",
+          "oklch(26% 0.0347 306.3)",
+          "oklch(38% 0.0347 306.3)",
+          "oklch(49% 0.0347 306.3)",
+          "oklch(61% 0.0347 306.3)",
+          "oklch(72% 0.0347 306.3)",
+          "oklch(84% 0.0347 306.3)",
+          "oklch(95% 0.0347 306.3)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "heading": {
+        "displayName": "页面标题",
+        "purpose": "识别当前学习区域。"
+      },
+      "word": {
+        "displayName": "卡片词头",
+        "purpose": "贴纸下方的主词头。"
+      },
+      "date": {
+        "displayName": "辅助衬线字",
+        "purpose": "按当日月份和日期组织纸面。"
+      },
+      "article": {
+        "displayName": "英文段落",
+        "purpose": "在可调节字号下持续阅读。"
+      },
+      "example": {
+        "displayName": "例句",
+        "purpose": "翻面后显示实际语境。"
+      }
+    },
+    "shadows": [
+      {
+        "name": "贴纸标签",
+        "value": "0 2px 4px rgba(32,28,40,.16)",
+        "purpose": "抬起白色字条。"
+      },
+      {
+        "name": "词卡纸面",
+        "value": "0 5px 12px rgba(36,29,45,.12)",
+        "purpose": "区分重叠的卡片。"
+      },
+      {
+        "name": "词义浮层",
+        "value": "0 8px 32px var(--shadow)",
+        "purpose": "使查词浮层高于文章。"
+      },
+      {
+        "name": "对话框",
+        "value": "0 15px 60px var(--shadow)",
+        "purpose": "日间主题阴影 rgba(39,30,52,.13)，夜间 rgba(0,0,0,.35)。"
+      }
+    ],
+    "motion": [
+      {
+        "name": "基础反馈",
+        "value": "160ms",
+        "purpose": "按钮响应、导航悬停。"
+      },
+      {
+        "name": "触碰贴纸",
+        "value": "320ms cubic-bezier(.2,.85,.28,1)",
+        "purpose": "贴纸抬高、轻微倾斜。"
+      },
+      {
+        "name": "词卡翻面",
+        "value": "530ms cubic-bezier(.18,.81,.21,1)",
+        "purpose": "正反面绕 Y 轴旋转 180°。"
+      },
+      {
+        "name": "词卡更换",
+        "value": "285ms cubic-bezier(.18,.82,.2,1)",
+        "purpose": "24px 水平偏移，旋转 5° 后回到原位。"
+      },
+      {
+        "name": "选中物件",
+        "value": "430ms cubic-bezier(.22,.8,.25,1)",
+        "purpose": "选中的贴纸副本飞向词卡。"
+      },
+      {
+        "name": "收藏完成",
+        "value": "540ms cubic-bezier(.22,.8,.25,1)",
+        "purpose": "已保存的词条缩小后飞向生词本。"
+      },
+      {
+        "name": "弹窗进入",
+        "value": "230ms cubic-bezier(.16,1,.3,1)",
+        "purpose": "透明度从 0.65 开始，上移 12px。"
+      },
+      {
+        "name": "减少动态",
+        "value": "prefers-reduced-motion: reduce",
+        "purpose": "关闭过渡与动画，跳过飞行、换卡动画及跟手位移。点按时直接切换可见面。"
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "收紧纸面",
+        "value": "1250px"
+      },
+      {
+        "name": "紧凑桌面与单列生词本",
+        "value": "1000px"
+      },
+      {
+        "name": "底部四项导航与词卡弹窗",
+        "value": "780px"
+      },
+      {
+        "name": "两列物件",
+        "value": "520px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "收藏按钮",
+      "kind": "button",
+      "refersTo": "collect-button",
+      "description": "保存成功后切换为已收藏状态。",
+      "html": "<button class=\"demo\">收进生词本</button> <button class=\"demo\" disabled>✓ 已收进生词本</button>",
+      "css": ".demo{font:600 13px \"Segoe UI\",\"Microsoft YaHei\",sans-serif;cursor:pointer}.demo:focus-visible{outline:3px solid #50417e;outline-offset:3px}.demo{min-height:44px;background:#d8cef6;color:#302448;border:0;border-radius:24px;padding:0 14px;font-weight:650}.demo:disabled{background:#ebe7f6;color:#50417e}"
+    },
+    {
+      "name": "上一张词卡",
+      "kind": "button",
+      "refersTo": "round-control",
+      "description": "边线圆按钮，切换到上一张卡片。",
+      "html": "<button class=\"demo\" aria-label=\"上一张词卡\"><svg aria-hidden=\"true\" viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"m15 5-7 7 7 7\"/></svg></button>",
+      "css": ".demo{font:600 13px \"Segoe UI\",\"Microsoft YaHei\",sans-serif;cursor:pointer}.demo:focus-visible{outline:3px solid #50417e;outline-offset:3px}.demo{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;border:1px solid #dedde3;background:#fff;color:#25242b}.demo:hover{background:#ebe7f6}"
+    },
+    {
+      "name": "当前导航",
+      "kind": "nav",
+      "refersTo": "nav-current",
+      "description": "选中的标签使用浅紫底色。",
+      "html": "<nav aria-label=\"学习\"><a class=\"demo\" aria-current=\"page\" href=\"#reading\">阅读练习</a></nav>",
+      "css": ".demo{font:600 13px \"Segoe UI\",\"Microsoft YaHei\",sans-serif;cursor:pointer}.demo:focus-visible{outline:3px solid #50417e;outline-offset:3px}.demo{display:inline-flex;align-items:center;min-height:42px;border-radius:17px;padding:0 15px;background:#ebe7f6;color:#50417e;text-decoration:none;font-size:14px}"
+    },
+    {
+      "name": "搜索框",
+      "kind": "input",
+      "refersTo": "form-input",
+      "description": "以短提示说明可检索的内容。",
+      "html": "<input class=\"demo\" aria-label=\"搜索单词\" placeholder=\"搜索单词、释义或实际词形\" />",
+      "css": ".demo{font:600 13px \"Segoe UI\",\"Microsoft YaHei\",sans-serif;cursor:pointer}.demo:focus-visible{outline:3px solid #50417e;outline-offset:3px}.demo{box-sizing:border-box;min-height:42px;padding:10px 12px;background:#fff;color:#25242b;border:1px solid #dedde3;border-radius:12px;font-weight:400;cursor:text}.demo::placeholder{color:#62616d}"
+    },
+    {
+      "name": "个人文字贴纸",
+      "kind": "custom",
+      "refersTo": "notebook-label",
+      "description": "没有物件图片的个人词条直接显示词头。",
+      "html": "<span class=\"label\" lang=\"en\">notebook</span>",
+      "css": ".label{display:inline-block;max-width:100%;overflow-wrap:anywhere;transform:rotate(-3deg);border-radius:8px;background:#fff;color:#29262c;padding:8px;font:900 23px/1.16 ui-rounded,\"Trebuchet MS\",\"Segoe UI\",sans-serif;letter-spacing:-.032em;box-shadow:0 2px 4px rgba(32,28,40,.16)}"
+    },
+    {
+      "name": "个人词卡正面",
+      "kind": "card",
+      "refersTo": "deck-front",
+      "description": "无图片的个人词条使用文字贴纸和淡紫色点阵卡纸。",
+      "html": "<button type=\"button\" class=\"card\" aria-label=\"notebook，翻面查看词义\"><span class=\"art\"><span class=\"label\">notebook</span></span><strong>notebook</strong><small>轻点翻面</small></button>",
+      "css": ".card{display:flex;align-items:center;justify-content:center;flex-direction:column;box-sizing:border-box;padding:20px;height:275px;width:100%;max-width:337px;border:none;border-radius:25px;color:#27232c;box-shadow:0 5px 12px rgba(36,29,45,.12);background-color:#dcd1e9;background-image:radial-gradient(circle,rgba(62,46,67,.16) .85px,transparent 1px);background-size:15px 15px}.art{display:grid;place-items:center;width:62%;height:65%;transform:rotate(-5deg);filter:drop-shadow(0 4px 3px rgba(48,34,44,.13))}.label{display:block;padding:8px;border-radius:8px;background:#fff;color:#29262c;box-shadow:0 2px 4px rgba(32,28,40,.16);font:900 23px/1.16 ui-rounded,\"Trebuchet MS\",sans-serif;transform:rotate(-3deg);letter-spacing:-.032em}.card strong{font:900 31px/1.15 ui-rounded,\"Trebuchet MS\",sans-serif;letter-spacing:-.035em}.card small{font-size:12px;margin-top:9px;color:#50464f}.card:focus-visible{outline:3px solid #50417e;outline-offset:3px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "翻过词卡，在句子里认出这个词",
+    "overview": "阅读正文、目标词、划词翻译和收藏共用淡紫纸面与圆体词头。",
+    "keyCharacteristics": [
+      "浅紫色标出主要操作和当前导航。",
+      "只有学习材料使用点阵纸、模切物件或文字贴纸。",
+      "英语阅读用衬线字体，词卡标题用较粗的圆体字。"
+    ],
+    "rules": [],
+    "dos": [
+      "为缺少物件图片的个人词条使用可换行文字贴纸。",
+      "让键盘与触屏用户都能翻面、前后切换及关闭词卡。",
+      "只有成功保存义项后才显示“已收进生词本”。"
+    ],
+    "donts": [
+      "长文保持素色，动效仅在交互时触发。"
+    ]
+  }
+}

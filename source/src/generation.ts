@@ -1,9 +1,10 @@
+import {parseTaggedLine,inlinePartOfSpeech,partOfSpeechHeader,meaningfulPos} from './parts-of-speech';
 import {parseMarkdownVocabulary} from './markdown';
 import type {Article,Question,Mode,Target} from './types';
 import {parseCSV,validateQuestion} from './domain';
 export const MAX_GENERATION_WORDS=200;
 export const ARTICLE_COUNT=5;
-export interface GenerationWord {word:string;zh:string;emphasized?:boolean}
+export interface GenerationWord {word:string;zh:string;pos?:string;emphasized?:boolean}
 export interface GenerationRequest {format:'ContextFlowGenerationRequest';version:1;batchId:string;articleCount:5;requiredWords:string[];targets:(Target&{en:string;zh:string;suppliedMeaning?:boolean;emphasized?:boolean})[];sourceMarkdown?:string;mode:Mode;topic:string;length:string;difficulty:string;includeQuestions:boolean;recentContexts:string[];instructions:string}
 export interface LearningBundle {format:'ContextFlowLearningBundle';version:1;articles:Article[];questions:Question[]}
 export interface CoverageReport {requiredCount:number;articles:{title:string;covered:number;missing:string[]}[];duplicates:string[];valid:boolean}
@@ -15,11 +16,17 @@ export function parseGenerationWords(text:string,filename=''){
  if(/\.(md|markdown)$/i.test(filename)||/^\s*(?:#{1,6}\s|[-*+]\s+(?:\*\*|__)?[A-Za-z]|\d+[.)、]\s+(?:\*\*|__)?[A-Za-z]|\*\*[A-Za-z]|__[A-Za-z]|\|)/m.test(input)){const parsed=parseMarkdownVocabulary(input);entries=parsed.words;markdownInvalid=parsed.invalid;}else if(/^[\[{]/.test(input)){
    const raw=JSON.parse(input);const list=Array.isArray(raw)?raw:raw.words;
    if(!Array.isArray(list))throw Error('JSON 需要单词数组，或含 words 数组的对象。');
-   entries=list.map(x=>typeof x==='string'?{word:x,zh:''}:{word:String(x.word||x.lemma||''),zh:String(x.zh||x.meaning||'')});
+   entries=list.map(x=>typeof x==='string'?{word:x,zh:''}:{word:String(x.word||x.lemma||''),zh:String(x.zh||x.meaning||''),pos:String(x.pos||x.partOfSpeech||x['词性']||'')});
  }else if(/\.csv$/i.test(filename)||/^\s*(word|lemma|单词)\s*,/i.test(input)){
-   const rows=parseCSV(input);if(/^(word|lemma|单词)$/i.test(rows[0]?.[0]||''))rows.shift();entries=rows.map(row=>({word:row[0],zh:row[1]||''}));
+   const rows=parseCSV(input),head=rows[0]||[],hasHeader=head.some(x=>/^(word|lemma|单词)$/i.test(x.trim()));
+   const posIndex=hasHeader?head.findIndex(partOfSpeechHeader):-1;
+   const wordIndex=hasHeader?head.findIndex(x=>/^(word|lemma|单词)$/i.test(x.trim())):0;
+   const meaningIndex=hasHeader?head.findIndex(x=>/^(zh|meaning|definition|中文|中文释义|释义|词义)$/i.test(x.trim())):-1;
+   if(hasHeader)rows.shift();
+   entries=rows.map(row=>({word:row[wordIndex]||'',zh:row[meaningIndex>=0?meaningIndex:posIndex===1?2:1]||'',pos:posIndex>=0?row[posIndex]:undefined}));
  }else{
    for(const line of input.split(/\r?\n/).filter(x=>x.trim())){
+     const tagged=parseTaggedLine(line);if(tagged){entries.push(tagged);continue;}
      const mixed=line.trim().match(/^([a-zA-Z]+(?:[ '’-][a-zA-Z]+)*)\s*[:：,，\t ]\s*([\u4e00-\u9fff].*)$/);
      if(mixed)entries.push({word:mixed[1],zh:mixed[2]});
      else entries.push(...line.split(/[\s,，;；]+/).filter(Boolean).map(word=>({word,zh:''})));
@@ -27,7 +34,7 @@ export function parseGenerationWords(text:string,filename=''){
  }
  if(entries.length>10000)throw Error('输入内容过多，请仅保留本轮最多 200 个单词。');
  const words:GenerationWord[]=[],duplicates:string[]=[],invalid:string[]=[...markdownInvalid],seen=new Set<string>();
- for(const item of entries){const word=item.word.trim().replace(/[’‘]/g,"'");if(!validWord(word)||item.zh.length>10000){invalid.push(item.word);continue;}const key=norm(word);if(seen.has(key)){duplicates.push(word);const previous=words.find(w=>norm(w.word)===key)!;if(item.zh)previous.zh+='\n'+item.zh;previous.emphasized=previous.emphasized||item.emphasized;continue;}seen.add(key);words.push({word,zh:item.zh.trim(),emphasized:item.emphasized});}
+ for(const item of entries){const word=item.word.trim().replace(/[’‘]/g,"'");if(!validWord(word)||item.zh.length>10000){invalid.push(item.word);continue;}const pos=meaningfulPos(item.pos)||inlinePartOfSpeech(item.zh);if(pos.length>100){invalid.push(word);continue;}const key=norm(word);if(seen.has(key)){duplicates.push(word);const previous=words.find(w=>norm(w.word)===key)!;if(item.zh)previous.zh+='\n'+item.zh;if(pos)previous.pos=[...new Set([previous.pos,pos].filter(Boolean))].join(' / ');previous.emphasized=previous.emphasized||item.emphasized;continue;}seen.add(key);words.push({word,zh:item.zh.trim(),emphasized:item.emphasized,...(pos?{pos}:{})});}
  return {words,duplicates,invalid,overLimit:words.length>MAX_GENERATION_WORDS};
 }
 export function containsRequiredWord(text:string,word:string){const escaped=norm(word).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');return new RegExp("(^|[^a-zA-Z'-])"+escaped+"(?=$|[^a-zA-Z'-])",'i').test(norm(text));}
