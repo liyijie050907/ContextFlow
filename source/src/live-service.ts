@@ -1,5 +1,7 @@
+import {fileStudyFetch} from './file-study';
+import {inferenceSlot} from './inference-budget';
 import {serviceCatalog} from './service-catalog';
-import {serviceJSON} from './service-response';
+import {httpServiceFailure,retryTemporaryService,serviceJSON} from './service-response';
 import {preparedLookup} from './reading-cache';
 import {consumeLiveStream} from './live-stream';
 import {cachedTranslation,cacheTranslation} from './translation-cache';
@@ -13,16 +15,55 @@ type CustomConfig={baseURL:string;protocol:string;maxOutputTokens:number;apiVers
 type ServiceStatus={hosted?:boolean;chatgpt:boolean;api:boolean;custom?:boolean;customConfig?:CustomConfig;credentialIssue?:string;preferences?:Choice};
 type UI={modal:(title:string,body:string,wide?:boolean)=>void;esc:(value:unknown)=>string;announce:(message:string)=>void};
 let sessionToken='',choice:Choice|undefined,sessionRequest:Promise<string>|undefined;
-export async function liveAPI<T=any>(path:string,body:unknown={},signal?:AbortSignal):Promise<T>{
- if(location.protocol==='file:')throw Error('AI 缓存需要后台服务。请使用整合包的启动脚本，或打开自行部署的网址；本页面仍可离线阅读和导出备份。');
- if(!sessionToken){const pending=sessionRequest ||= (async()=>{const response=await fetch('/api/session'),session=await serviceJSON(response,'/api/session');if(!response.ok)throw Error(session.error||'当前网页尚未连接 AI 后台服务。');if(typeof session.token!=='string'||!session.token)throw Error('网站后台没有返回会话凭据，请检查 /api/session 路由并更新后台。');return session.token;})();try{sessionToken=await pending;}finally{if(sessionRequest===pending)sessionRequest=undefined;}}
- let response:Response;try{response=await fetch('/api'+path,{method:'POST',headers:{'Content-Type':'application/json','X-ContextFlow-Client':sessionToken},body:JSON.stringify(body),signal});}catch{throw Error('与当前项目的连接中断，请检查开发服务器是否仍在运行，再重试。');}
- if(response.status===403)sessionToken='';const value=await serviceJSON(response,'/api'+path);if(!response.ok)throw Error(value.error||'请求未能完成');return value;
+export function liveAPI<T=any>(path:string,body:unknown={},signal?:AbortSignal):Promise<T>{
+ const streaming=['/prepare-reading','/generate-article','/generate-questions'].includes(path);
+ const run=()=>inferenceSlot(path,()=>streaming
+  ? rawLiveTextStream<T>(path,body,()=>{},signal)
+  : rawLiveAPI<T>(path,body,signal),signal);
+ return path==='/prepare-reading'||path==='/status'?retryTemporaryService(run,signal):run();
 }
+export async function generationModelChoice():Promise<Choice>{const state=await liveAPI<ServiceStatus>('/status');const selected=choice||state.preferences;if(!selected?.model||!selected.provider)throw Error('尚未选择生成模型，请主动连接服务并保存模型');if(selected.provider==='custom'&&!state.custom||selected.provider==='chatgpt'&&!state.chatgpt||selected.provider==='api'&&!state.api)throw Error('所选服务尚未连接，请主动连接后再生成');return {...selected};}
+async function serviceFetch(path:string,init?:RequestInit){
+ if(location.protocol==='file:')return fileStudyFetch(path,init||{});
+ try{return await fetch('/api'+path,init);}
+ catch{
+  init?.signal?.throwIfAborted();
+  throw Object.assign(Error('与网站后台的连接中断，请稍后重试。'),{deliveryUncertain:true});
+ }
+}
+async function getSessionToken(){
+ if(location.protocol==='file:')return 'local-study';
+ if(sessionToken)return sessionToken;
+ const pending=sessionRequest ||= (async()=>{
+  const response=await serviceFetch('/session');
+  const data=await serviceJSON(response,'/api/session');
+  if(!response.ok)throw httpServiceFailure(response,data.error||'当前网页尚未连接 AI 后台服务。');
+  if(typeof data.token!=='string'||!data.token)throw Error('网站后台没有返回会话凭据。');
+  return data.token;
+ })();
+ try{sessionToken=await pending;return sessionToken;}
+ finally{if(sessionRequest===pending)sessionRequest=undefined;}
+}
+async function postService(path:string,body:unknown,signal:AbortSignal|undefined,streaming=false){
+ const token=await getSessionToken();
+ signal?.throwIfAborted();
+ const headers={'Content-Type':'application/json','X-ContextFlow-Client':token,...(streaming?{Accept:'application/x-ndjson'}:{})};
+ const response=await serviceFetch(path,{method:'POST',headers,body:JSON.stringify(body),signal});
+ if(response.status===403&&sessionToken===token)sessionToken='';
+ return response;
+}
+async function rawLiveAPI<T>(path:string,body:unknown,signal?:AbortSignal):Promise<T>{
+ const response=await postService(path,body,signal);
+ const data=await serviceJSON(response,'/api'+path);
+ if(!response.ok)throw httpServiceFailure(response,data.error||'请求未能完成');
+ return data;
+}
+
 async function modelChoice():Promise<Choice>{if(choice)return choice;const state=await liveAPI<ServiceStatus>('/status');const provider=state.preferences?.provider||(state.chatgpt?'chatgpt':'');if(!provider)throw Error(state.credentialIssue||'请先连接 ChatGPT，或主动选择并配置独立 API。');if(provider==='custom'){if(!state.custom||!state.preferences?.model)throw Error('请先配置自定义 API 并填写模型 ID。');choice={provider,model:state.preferences.model};return choice;}const {models}=await liveAPI<{models:Model[]}>('/models',{provider});const model=models.find(m=>m.id===state.preferences?.model)?.id||models[0]?.id;if(!model)throw Error('当前服务没有可用模型。');choice={provider,model};return choice;}
 export async function currentModelChoice(){return modelChoice();}
 export async function showServiceSettings(ui:UI,onReady?:()=>void){
- ui.modal('阅读缓存与查询',`<section class="service-settings" data-component="ServiceSettings"><p class="modal-intro">选择服务商并填入密钥，再获取可用模型。</p><form id="live-service-form"><label>接入方式<select id="live-provider"><option value="chatgpt">GPT 套餐登录</option><option value="custom">模型 API</option></select></label><section id="live-chatgpt"><button type="button" class="btn primary" id="live-login">登录 ChatGPT</button><p id="live-login-status" role="status"></p><a id="live-login-link" class="btn subtle" target="_blank" rel="noopener noreferrer" hidden>打开登录网页</a><label>套餐可用模型<select id="live-model"><option value="">请先登录并获取模型</option></select></label></section><section id="live-custom" hidden><div class="button-row" role="group" aria-label="API 配置模式"><button class="btn subtle" id="service-common" type="button" aria-pressed="true">常见服务商</button><button class="btn subtle" id="service-other" type="button" aria-pressed="false">自定义接口</button></div><label id="service-vendor-label">服务商<select id="service-vendor">${serviceCatalog.map(v=>`<option value="${v.id}">${ui.esc(v.name)}</option>`).join('')}</select></label><section id="service-address" hidden><label>API 地址<input id="live-base-url" type="url" placeholder="https://服务商地址/v1"></label><label>API 协议<select id="live-protocol"><option value="chat-completions">OpenAI Chat Completions</option><option value="responses">OpenAI Responses</option><option value="anthropic">Anthropic Messages</option><option value="gemini">Gemini 原生</option></select></label></section><label>API 密钥<input id="live-custom-key" type="password" autocomplete="off" placeholder="输入此服务商的 API Key"></label><p id="live-key-note" class="generation-help">密钥加密保存，不进入学习备份。</p><label>可用模型<select id="live-custom-model"><option value="">填写 Key 后获取模型列表</option></select></label><details id="service-manual"><summary>接口未提供模型列表？</summary><p class="generation-help">常见服务商从接口读取实际列表；仅在自定义接口不提供列表时，可添加服务商给出的模型 ID。</p><label>手动添加模型<input id="manual-model" maxlength="256"></label><button id="add-manual-model" class="btn subtle" type="button">添加模型</button></details><details><summary>高级设置</summary><label>最大输出 Token<input id="live-max-tokens" type="number" min="256" max="131072" value="8192"></label><label>Anthropic-Version<input id="live-api-version" value="2026-10-21"></label></details></section><div class="button-row"><button type="button" class="btn subtle" id="live-models">获取可用模型</button><button type="button" class="btn subtle" id="live-test">测试连接</button></div><p id="live-service-message" class="generation-help" role="status" aria-live="polite"></p><div class="modal-actions"><button type="submit" class="btn primary">保存并使用</button></div></form></section>`,true);
+ if(location.protocol==='file:'){ui.modal('连接学习服务','<p>在本机服务中选择模型，然后返回词表。</p><a class="btn primary" href="http://127.0.0.1:5173/#settings" target="_blank" rel="noopener">打开本机设置</a>');return;}
+ ui.modal('学习服务',`<section class="service-settings" data-component="ServiceSettings"><p class="modal-intro">选择服务商并填入密钥，再获取可用模型。</p><form id="live-service-form"><label>接入方式<select id="live-provider"><option value="chatgpt">GPT 套餐登录</option><option value="custom">模型 API</option></select></label><section id="live-chatgpt"><button type="button" class="btn primary" id="live-login">登录 ChatGPT</button><p id="live-login-status" role="status"></p><a id="live-login-link" class="btn subtle" target="_blank" rel="noopener noreferrer" hidden>打开登录网页</a><label>套餐可用模型<select id="live-model"><option value="">请先登录并获取模型</option></select></label></section><section id="live-custom" hidden><div class="button-row" role="group" aria-label="API 配置模式"><button class="btn subtle" id="service-common" type="button" aria-pressed="true">常见服务商</button><button class="btn subtle" id="service-other" type="button" aria-pressed="false">自定义接口</button></div><label id="service-vendor-label">服务商<select id="service-vendor">${serviceCatalog.map(v=>`<option value="${v.id}">${ui.esc(v.name)}</option>`).join('')}</select></label><section id="service-address" hidden><label>API 地址<input id="live-base-url" type="url" placeholder="https://服务商地址/v1"></label><label>API 协议<select id="live-protocol"><option value="chat-completions">OpenAI Chat Completions</option><option value="responses">OpenAI Responses</option><option value="anthropic">Anthropic Messages</option><option value="gemini">Gemini 原生</option></select></label></section><label>API 密钥<input id="live-custom-key" type="password" autocomplete="off" placeholder="输入此服务商的 API Key"></label><p id="live-key-note" class="generation-help">密钥加密保存，不进入学习备份。</p><label>可用模型<select id="live-custom-model"><option value="">填写 Key 后获取模型列表</option></select></label><details id="service-manual"><summary>接口未提供模型列表？</summary><p class="generation-help">常见服务商从接口读取实际列表；仅在自定义接口不提供列表时，可添加服务商给出的模型 ID。</p><label>手动添加模型<input id="manual-model" maxlength="256"></label><button id="add-manual-model" class="btn subtle" type="button">添加模型</button></details><details><summary>高级设置</summary><label>最大输出 Token<input id="live-max-tokens" type="number" min="256" max="131072" value="8192"></label><label>Anthropic-Version<input id="live-api-version" value="2026-10-21"></label></details></section><div class="button-row"><button type="button" class="btn subtle" id="live-models">获取可用模型</button><button type="button" class="btn subtle" id="live-test">测试连接</button></div><p id="live-service-message" class="generation-help" role="status" aria-live="polite"></p><div class="modal-actions"><button type="submit" class="btn primary">保存并使用</button></div></form></section>`,true);
  const form=document.querySelector<HTMLFormElement>('#live-service-form')!,get=<T extends HTMLElement>(id:string)=>form.querySelector<T>('#'+id)!,provider=get<HTMLSelectElement>('live-provider'),vendor=get<HTMLSelectElement>('service-vendor'),model=get<HTMLSelectElement>('live-custom-model'),key=get<HTMLInputElement>('live-custom-key'),message=get<HTMLElement>('live-service-message');let saved:ServiceStatus|undefined,other=false,busy=false,revision=0;
  if(document.body.dataset.cfHosted==='cloudflare'){provider.innerHTML='<option value="custom">模型 API</option>';form.parentElement!.querySelector('.modal-intro')!.textContent='Cloudflare 版使用 API Key。选择服务商并获取模型后保存；GPT 套餐登录仅限本机版。';}
  const value=(id:string)=>get<HTMLInputElement|HTMLSelectElement>(id).value;
@@ -41,11 +82,21 @@ export async function showServiceSettings(ui:UI,onReady?:()=>void){
  preset();try{saved=await liveAPI<ServiceStatus>('/status');if(saved.api&&!saved.hosted)provider.add(new Option('OpenAI API（已保存）','api'));if(saved.hosted)provider.innerHTML='<option value="custom">模型 API</option>';provider.value=saved.hosted?'custom':choice?.provider||saved.preferences?.provider||'custom';const c=saved.customConfig;if(c){const found=serviceCatalog.find(v=>v.url.replace(/\/$/,'')===c.baseURL.replace(/\/$/,'')&&v.protocol===c.protocol);other=!found;if(found)vendor.value=found.id;get<HTMLInputElement>('live-base-url').value=c.baseURL;get<HTMLSelectElement>('live-protocol').value=c.protocol;get<HTMLInputElement>('live-max-tokens').value=String(c.maxOutputTokens);get<HTMLInputElement>('live-api-version').value=c.apiVersion;key.placeholder=c.hasKey?'已保存，留空沿用':'输入此服务商的 API Key';get('live-key-note').textContent=saved.hosted?'密钥在部署服务器加密保存，与其他浏览器会话隔离。':'密钥在本机加密保存，不进入学习备份。';}display();if(provider.value==='api'&&saved.api||provider.value==='chatgpt'&&saved.chatgpt||provider.value==='custom'&&saved.custom)await run(refresh);}catch(e){display();message.textContent=(e as Error).message;}
 }
 
-async function liveTextStream<T>(path:string,body:unknown,onDelta:(text:string)=>void,signal?:AbortSignal):Promise<T>{
- if(!sessionToken)await liveAPI('/status');
- const response=await fetch('/api'+path,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/x-ndjson','X-ContextFlow-Client':sessionToken},body:JSON.stringify(body),signal});
- if(!response.ok){if(response.status===403)sessionToken='';const error=await serviceJSON(response,'/api'+path);throw Error(error.error||'查询未能完成');}
- if(!response.headers.get('Content-Type')?.includes('application/x-ndjson'))return serviceJSON(response,'/api'+path);
+function liveTextStream<T>(path:string,body:unknown,onDelta:(text:string)=>void,signal?:AbortSignal):Promise<T>{
+ let partial=false;
+ const run=()=>inferenceSlot(path,()=>rawLiveTextStream<T>(path,body,text=>{
+  partial||=!!text;
+  onDelta(text);
+ },signal),signal);
+ return retryTemporaryService(run,signal,()=>!partial);
+}
+async function rawLiveTextStream<T>(path:string,body:unknown,onDelta:(text:string)=>void,signal?:AbortSignal):Promise<T>{
+ const response=await postService(path,body,signal,true);
+ if(!response.ok||!response.headers.get('Content-Type')?.includes('application/x-ndjson')){
+  const data=await serviceJSON(response,'/api'+path);
+  if(!response.ok)throw httpServiceFailure(response,data.error||'请求未能完成');
+  return data;
+ }
  return consumeLiveStream<T>(response,onDelta);
 }
 export async function showLiveLookup(word:string,originalContext:string,ui:UI,onSave:(lexeme:Lexeme)=>Promise<void>,force=false){

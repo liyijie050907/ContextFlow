@@ -1,7 +1,12 @@
+import {PosJobs} from './pos-jobs';
+import {GenerationQueue} from './generation-queue';
+import {connectFileStudy} from './file-study';
+import {quizMarkup,answerReading,submitReading,resetReading} from './reading-quiz';
+import {normalizeTerm} from './vocabulary-term';
 import {motionMode,reducedMotion,setMotionMode} from './motion-mode';
 import {notebookStatus,statusNames,matchesSearch,type NotebookStatus,type CardCheck} from './notebook-status';
 import {setupSurfaceMotion} from './surface-motion';
-import {attachPosImport,generatedPos,requestParts} from './import-pos';
+import {requestParts} from './import-pos';
 import {meaningfulPos,inlinePartOfSpeech} from './parts-of-speech';
 import type {GenerationWord} from './generation';
 import {gsap} from 'gsap';
@@ -163,18 +168,20 @@ function renderReading(){
  const intro=heading('阅读练习','',actions);
  const filters=s().sets.length?`<section class="reading-controls"><label class="select-field">词汇表<select id="active-set"><option value="">全部词汇表</option>${s().sets.map(t=>`<option value="${esc(t.id)}" ${activeSet===t.id?'selected':''}>${esc(t.name)}</option>`).join('')}</select></label><a class="text-btn" href="#words">管理词汇表 ${icon('forward')}</a></section>`:'';
  if(!a&&!s().sets.length)return intro+`<section class="start-sheet"><div class="sheet-input"><h2>新建词汇表</h2>${wordImportForm(true)}</div><aside class="format-sample"><h3 id="sample-heading">词表格式示例</h3><div id="word-preview"></div></aside></section>`;
- if(!a)return intro+filters+`<section class="import-sheet"><span class="fold-icon">${icon('book')}</span><div><h2>${set?esc(set.name):'导入阅读文章'}</h2>${set?`<p>${set.targets.length} 个目标词</p>`:''}<div class="button-row">${button('import-article','导入文章','upload','btn primary')}${set?.targets.length?button('export-article-request','导出生成请求','download','btn subtle',`data-set="${esc(set.id)}"`):''}</div></div></section>`;
+ if(!a)return intro+filters+(set?studyPanel(set.id):'')+`<section class="import-sheet"><span class="fold-icon">${icon('book')}</span><div><h2>${set?esc(set.name):'导入阅读文章'}</h2>${set?`<p>${set.targets.length} 个目标词</p>`:''}<div class="button-row">${button('import-article','导入文章','upload','btn primary')}${set?.targets.length?button('generate-set','生成阅读和题目','book','btn primary',`data-set="${esc(set.id)}"`):''}${set?.targets.length?button('export-article-request','导出生成请求','download','btn subtle',`data-set="${esc(set.id)}"`):''}</div></div></section>`;
  const read=s().readArticles.includes(a.id),collected=a.targets.filter(t=>saved(t.senseId)).length;
  const more=`<details class="reading-more"><summary aria-label="更多阅读操作" data-tip="更多阅读操作">${icon('more')}</summary><div class="reading-menu">${button('stop-speech','停止朗读','stop','menu-btn')}${button('font-down','缩小字号','','menu-btn')}${button('font-up','放大字号','','menu-btn')}${button('highlight',s().settings.highlight?'关闭目标词高亮':'开启目标词高亮','layers','menu-btn')}${button('prepare-reading','阅读缓存与诊断','wifi','menu-btn')}${mergedArticleParts(a).length===5?button('split-merged','拆分为 5 篇','list','menu-btn'):''}</div></details>`;
- return intro+filters+`<div class="reading-layout"><article class="reading-paper"><div class="article-top"><div class="article-meta"><span>${esc(a.topic)}</span><span>${wordCount(a)} 词</span><span>${Math.max(1,Math.ceil(wordCount(a)/140))} 分钟</span>${read?'<span class="read-state">已读</span>':''}</div>${more}</div>
+ return intro+filters+(set?studyPanel(set.id):'')+`<div class="reading-layout"><article class="reading-paper"><div class="article-top"><div class="article-meta"><span>${esc(a.topic)}</span><span>${wordCount(a)} 词</span><span>${Math.max(1,Math.ceil(wordCount(a)/140))} 分钟</span>${read?'<span class="read-state">已读</span>':''}</div>${more}</div>
  ${generatedArticleNavigation(a)}<h2 class="article-title" lang="en">${esc(a.title)}</h2>${a.subtitle&&!['个人导入阅读','用户导入阅读'].includes(a.subtitle)?`<p class="article-subtitle">${esc(a.subtitle)}</p>`:''}
  <div class="article-body" lang="en">${a.paragraphs.map((p,i)=>`<section class="paragraph"><p data-paragraph="${i}">${renderText(p.en,a,i)}</p><div class="paragraph-foot"><div class="paragraph-actions">${button('speak-paragraph','朗读','sound','text-btn',`data-p="${i}" aria-label="朗读第 ${i+1} 段"`)}</div><details class="translation" lang="zh-CN"><summary>本段译文 ${icon('chevron')}</summary><p>${p.segments?p.segments.map(seg=>esc(seg.zh)+(seg.english?'<mark data-occurrence="'+esc(seg.occurrenceId||'')+'">（'+esc(seg.english)+'）</mark>':'')).join(''):esc(p.zh||cachedParagraph(p.en)||'尚无译文，可在更多操作中准备阅读缓存。')}</p></details></div></section>`).join('')}</div>
- <div class="article-pagination"><span>${matches.findIndex(x=>x.id===a.id)+1} / ${matches.length} 篇</span><div class="button-row">${button('mark-read',read?'已读完':'完成阅读','check','btn stamp-btn',read?'disabled':'')}${a.questionIds?.length?button('start-quiz','语境练习','book','btn subtle'):''}${matches.length>1?button('next-article','下一篇','arrow','btn subtle'):''}</div></div></article>
+ <div class="article-pagination"><span>${matches.findIndex(x=>x.id===a.id)+1} / ${matches.length} 篇</span><div class="button-row">${button('mark-read',read?'已读完':'完成阅读','check','btn stamp-btn',read?'disabled':'')}${a.questionIds?.length?button('start-quiz','语境练习','book','btn subtle'):''}${matches.length>1?button('next-article','下一篇','arrow','btn subtle'):''}</div></div><section id="reading-quiz" class="study-quiz">${quizMarkup(s(),a,esc)}</section></article>
  <aside class="learning-rail"><div class="rail-title"><h2>本轮目标词</h2><span>${a.targets.length}</span></div><ul class="target-list">${a.targets.map((t,i)=>{const obj=senseById(t.senseId),art=wordArt(t.word),known=obj&&(obj.sense.source==='user'||personal(obj.sense.id));return `<li><button data-action="target-word" data-sense="${esc(t.senseId)}" data-word="${esc(t.word)}"><span class="target-index">${art?`<img src="${art.image}" alt="" draggable="false">`:String(i+1).padStart(2,'0')}</span><span><strong lang="en">${esc(t.word)}</strong>${known?`<small>${markdownInline(meaning(obj.sense))}</small>`:''}</span>${icon(saved(t.senseId)?'bookmark':'forward')}</button></li>`}).join('')}</ul>${a.targets.length?`<div class="rail-progress"><span>本篇已收藏</span><strong>${collected}<small> / ${a.targets.length}</small></strong><div class="line-meter"><i style="width:${100*collected/a.targets.length}%"></i></div></div>`:''}</aside></div>`;
 }
 function wordCount(a:Article){return (a.paragraphs.map(p=>p.en).join(' ').match(/\b[\w'-]+\b/g)||[]).length;}
 function renderText(text:string,a:Article,p:number){
- const tokens=[...text.matchAll(/[A-Za-z]+(?:['’\-][A-Za-z]+)*/g)];let out='',last=0;
+ const literals=a.targets.map(t=>t.word).filter(Boolean).sort((x,y)=>y.length-x.length).map(word=>word.replace(/[.*+?^\x24{}()|[\]\\]/g,'\\$&'));
+ const exact=literals.length?"(?<![a-z0-9'-])(?:"+literals.join('|')+")(?![a-z0-9'+#-])|":'';
+ const tokens=[...text.matchAll(new RegExp(exact+"[A-Za-z]+(?:['’-][A-Za-z]+)*",'gi'))];let out='',last=0;
  for(let i=0;i<tokens.length;i++){
   const token=tokens[i];let word=token[0],end=token.index!+word.length;
   // Longest dictionary phrase, only across whitespace; punctuation remains a boundary.
@@ -219,7 +226,14 @@ function previousImportSense(w:GenerationWord){
  return resolver.lookup(w.word).senses.find(x=>(x.source==='user'||personal(x.id))&&!x.zh.startsWith('释义待补充'));
 }
 function bindWordForm(form:HTMLFormElement|null){
- if(form)attachPosImport(form,w=>{const se=previousImportSense(w);return se?knownPos(se):''},updateWordPreview);
+ if(!form)return;
+ form.querySelector('textarea')?.addEventListener('input',updateWordPreview);
+ const toggle=form.querySelector<HTMLButtonElement>('[data-fill-pos]')!;
+ toggle.onclick=()=>{
+  const value=toggle.getAttribute('aria-checked')!=='true';
+  toggle.setAttribute('aria-checked',String(value));
+  void change(d=>{d.settings.autoPos=value;});
+ };
 }
 function renderWordRows(set:UserState['sets'][number]){
  const seen=new Set<string>();
@@ -235,7 +249,7 @@ function renderWordRows(set:UserState['sets'][number]){
 function renderWords(){
  if(!activeSet&&s().sets.length===1)activeSet=s().sets[0].id;
  const active=s().sets.find(t=>t.id===activeSet);
- return heading('词汇库','',button('import-words','新建词汇表','plus','btn primary'))+`<div class="collection-layout"><aside class="collections"><h2>我的词汇表</h2>${s().sets.map(t=>`<button class="collection ${activeSet===t.id?'active':''}" data-action="set" data-id="${esc(t.id)}">${icon('folder')}<span>${esc(t.name)}</span><em>${t.targets.length}</em></button>`).join('')||'<p class="muted">还没有词汇表</p>'}</aside><section class="word-workspace">${active?`<div class="section-heading"><h2>${esc(active.name)} · ${active.targets.length} 词</h2>${button('delete-set','删除词汇表','trash','text-btn')}</div><div class="button-row"><button type="button" class="btn primary" data-sticker="list-deck" data-set="${esc(active.id)}" data-name="${esc(active.name)}" ${active.targets.length?'':'disabled'}>${icon('layers')}翻看词卡</button>${button('export-article-request','导出文章生成请求','download','btn subtle')}${button('import-article','导入生成好的文章','upload','btn subtle')}${button('edit-set','编辑词义','edit','text-btn')}</div><div class="table-tools">${searchBox('搜索此词汇表')}</div><div class="lex-grid">${renderWordRows(active)}</div>`:empty(s().sets.length?'选择词汇表':'还没有词汇表',s().sets.length?'从列表选择要学习的词汇表。':'新建词汇表后，即可导入自己的单词与词义。')}</section></div>`;
+ return heading('词汇库','',button('import-words','新建词汇表','plus','btn primary'))+`<div class="collection-layout"><aside class="collections"><h2>我的词汇表</h2>${s().sets.map(t=>`<button class="collection ${activeSet===t.id?'active':''}" data-action="set" data-id="${esc(t.id)}">${icon('folder')}<span>${esc(t.name)}</span><em>${t.targets.length}</em></button>`).join('')||'<p class="muted">还没有词汇表</p>'}</aside><section class="word-workspace">${active?`<div class="section-heading"><h2>${esc(active.name)} · ${active.targets.length} 词</h2>${button('delete-set','删除词汇表','trash','text-btn')}</div><div class="button-row"><button type="button" class="btn primary" data-sticker="list-deck" data-set="${esc(active.id)}" data-name="${esc(active.name)}" ${active.targets.length?'':'disabled'}>${icon('layers')}翻看词卡</button>${button('append-words','添加单词','plus','btn subtle')}${button('generate-set','生成阅读和题目','book','btn primary')}${button('export-article-request','导出文章生成请求','download','btn subtle')}${button('import-article','导入生成好的文章','upload','btn subtle')}${button('edit-set','编辑词义','edit','text-btn')}</div>${studyPanel(active.id)}<div class="table-tools">${searchBox('搜索此词汇表')}</div><div class="lex-grid">${renderWordRows(active)}</div>`:empty(s().sets.length?'选择词汇表':'还没有词汇表',s().sets.length?'从列表选择要学习的词汇表。':'新建词汇表后，即可导入自己的单词与词义。')}</section></div>`;
 }
 function empty(title:string,desc:string,actions=''){return `<div class="empty">${icon('book')}<h2>${title}</h2><p>${desc}</p>${actions}</div>`;}
 function notebookResults(items:VocabularyItem[]){
@@ -269,7 +283,7 @@ function renderHistory(){const attempts=s().attempts,first=[...new Map([...attem
  return heading('练习记录','',(due().length?button('review-due','开始到期复习','arrow','btn primary'):''))+
  `<div class="stats-row"><div><span>首次提交题数</span><strong>${first.length}<small>题</small></strong></div><div><span>首次正确率</span><strong>${first.length?Math.round(100*correct/first.length)+'%':'—'}</strong></div><div><span>有效复习次数</span><strong>${attempts.filter(a=>a.effective).length}<small>次</small></strong></div><div><span>查询 / 已读文章</span><strong>${s().lookups}<small> / ${s().readArticles.length}</small></strong></div></div><div class="history-layout"><section><h2 class="section-title">最近的语境练习</h2>${attempts.length?`<div class="attempt-list">${[...attempts].reverse().slice(0,100).map(a=>`<button class="attempt-row" data-action="attempt" data-id="${a.id}"><span class="result-icon ${a.correct?'correct':'wrong'}">${icon(a.correct?'check':'close')}</span><span><strong lang="en">${esc(a.question.word)}</strong><small>${esc(a.question.context)}</small></span><span class="attempt-date">${date(a.submittedAt)}<small>${a.effective?'有效复习':'额外练习'}</small></span>${icon('chevron')}</button>`).join('')}</div>`:empty('还没有测试记录','完成一次跨语境测试后，这里会留下你的首次答案和逐项解析。',`<a class="btn subtle" href="#read">开始阅读</a>`)}</section><aside><h2 class="section-title">薄弱义项</h2>${weak.length?weak.map(r=>{const obj=senseById(r.id);return `<div class="weak-item"><strong lang="en">${esc(obj?.lexeme.lemma||r.id)}</strong><p>${esc(obj?.sense.zh||'原义项不可用')}</p><small>答错 ${r.errors} 次 · ${date(r.nextAt)} 复习</small></div>`}).join(''):'<div class="quiet-empty">暂无错误记录。新的测试结果会显示在这里。</div>'}<div class="review-rules"><h3>掌握条件</h3><p>默认间隔 1、3、7、14、30 天。相同义项在 24 小时内只计一次有效复习。</p><p>已掌握需至少跨 14 天、5 次答对的有效复习及 3 个语境。该规则不等同考试能力认证。</p></div></aside></div>`;
 }
-function renderSettings(){return heading('设置','')+`<div class="settings-layout"><nav class="settings-index" aria-label="设置分区"><a href="#appearance" data-scroll="appearance">阅读与外观</a><a href="#storage" data-scroll="storage">数据与备份</a><a href="#generation" data-scroll="generation">阅读缓存与查询</a></nav><div class="settings-content"><section id="appearance" class="settings-section"><h2>阅读与外观</h2><div class="setting-row"><div><h3>颜色主题</h3></div><select id="theme" aria-label="颜色主题">${[['light','暖白浅色'],['dark','深灰深色'],['system','跟随系统']].map(([v,l])=>`<option value="${v}" ${s().settings.theme===v?'selected':''}>${l}</option>`).join('')}</select></div><div class="setting-row"><label for="motion-mode"><strong>界面动效</strong></label><select id="motion-mode">${[['system','跟随系统'],['full','完整动效'],['reduce','减少动效']].map(([v,l])=>`<option value="${v}" ${motionMode()===v?'selected':''}>${l}</option>`).join('')}</select></div><div class="setting-row"><div><h3>正文字号</h3></div><label><input id="font-size" type="range" min="16" max="26" value="${s().settings.fontSize}"> <output>${s().settings.fontSize}px</output></label></div></section><section id="storage" class="settings-section"><h2>数据与备份</h2><div class="button-row history-entry"><a href="#history" class="btn subtle">${icon('chart')}查看练习记录</a></div><div class="storage-banner"><span class="status-dot"></span><div><strong>${repo.mode==='IndexedDB'?'本机存储可用':repo.mode}</strong><p>${esc(repo.detail)}</p></div></div><details class="inline-help"><summary>备份包含什么？</summary><p>文件移动、隐私模式和浏览器清理可能影响本地数据。导出完整备份后，可在另一份 HTML 中恢复。凭据不会进入学习备份。</p></details><div class="button-row">${button('backup','导出完整备份','download','btn primary')}${button('restore','导入并预览备份','upload')}${button('previous','恢复上一保存快照','clock','btn subtle')}</div><div class="setting-row"><div><h3>清空学习数据</h3><p>清除收藏、个人修改和学习记录，内置内容仍在。</p></div>${button('reset','清空数据','trash','btn danger')}</div></section><section id="generation" class="settings-section"><h2>阅读缓存与查询</h2><p class="setting-explanation">接入的 AI 用于准备词义、段落译文及精准查询缓存。文章由你自行准备并批量导入，可边读边在后台缓存。</p><div class="provider-row"><span class="provider-symbol">${icon('book')}</span><div><strong>ChatGPT / 自定义模型 API</strong></div>${button('live-settings','连接或更换服务','arrow','btn subtle')}</div></section></div></div>`;}
+function renderSettings(){return heading('设置','')+`<div class="settings-layout"><nav class="settings-index" aria-label="设置分区"><a href="#appearance" data-scroll="appearance">阅读与外观</a><a href="#storage" data-scroll="storage">数据与备份</a><a href="#generation" data-scroll="generation">阅读缓存与查询</a></nav><div class="settings-content"><section id="appearance" class="settings-section"><h2>阅读与外观</h2><div class="setting-row"><div><h3>颜色主题</h3></div><select id="theme" aria-label="颜色主题">${[['light','暖白浅色'],['dark','深灰深色'],['system','跟随系统']].map(([v,l])=>`<option value="${v}" ${s().settings.theme===v?'selected':''}>${l}</option>`).join('')}</select></div><div class="setting-row"><label for="motion-mode"><strong>界面动效</strong></label><select id="motion-mode">${[['system','跟随系统'],['full','完整动效'],['reduce','减少动效']].map(([v,l])=>`<option value="${v}" ${motionMode()===v?'selected':''}>${l}</option>`).join('')}</select></div><div class="setting-row"><div><h3>正文字号</h3></div><label><input id="font-size" type="range" min="16" max="26" value="${s().settings.fontSize}"> <output>${s().settings.fontSize}px</output></label></div></section><section id="storage" class="settings-section"><h2>数据与备份</h2><div class="button-row history-entry"><a href="#history" class="btn subtle">${icon('chart')}查看练习记录</a></div><div class="storage-banner"><span class="status-dot"></span><div><strong>${repo.mode==='IndexedDB'?'本机存储可用':repo.mode}</strong><p>${esc(repo.detail)}</p></div></div><details class="inline-help"><summary>备份包含什么？</summary><p>文件移动、隐私模式和浏览器清理可能影响本地数据。导出完整备份后，可在另一份 HTML 中恢复。凭据不会进入学习备份。</p></details><div class="button-row">${button('backup','导出完整备份','download','btn primary')}${button('restore','导入并预览备份','upload')}${button('previous','恢复上一保存快照','clock','btn subtle')}</div><div class="setting-row"><div><h3>清空学习数据</h3><p>清除收藏、个人修改和学习记录，内置内容仍在。</p></div>${button('reset','清空数据','trash','btn danger')}</div></section><section id="generation" class="settings-section"><h2>阅读缓存与查询</h2><p class="setting-explanation">接入的 AI 用于准备词义、段落译文及精准查询缓存。也可使用所选模型生成阅读、题目和词性。</p><div class="provider-row"><span class="provider-symbol">${icon('book')}</span><div><strong>ChatGPT / 自定义模型 API</strong></div>${button('live-settings','连接或更换服务','arrow','btn subtle')}</div></section></div></div>`;}
 function closeOverlay(){overlay.querySelector('dialog')?.close();overlay.innerHTML='';const word=focusReturn?.dataset.word;const target=focusReturn?.isConnected?focusReturn:word?app.querySelector<HTMLElement>('[data-word="'+CSS.escape(word)+'"]'):document.getElementById('main');target?.focus({preventScroll:true});focusReturn=null;}
 function modal(title:string,body:string,wide=false){const opener=document.activeElement as HTMLElement;closeOverlay();focusReturn=opener;overlay.innerHTML=`<dialog class="modal${wide?' wide':''}" aria-labelledby="dialog-title"><div class="modal-head"><h2 id="dialog-title">${title}</h2>${button('close','','close','icon-btn','aria-label="关闭窗口"')}</div><div class="modal-body">${body}</div></dialog>`;const dialog=overlay.querySelector('dialog')!;dialog.showModal();dialog.addEventListener('cancel',e=>{e.preventDefault();closeOverlay()});dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if((e as MouseEvent).clientX<r.left||(e as MouseEvent).clientX>r.right||(e as MouseEvent).clientY<r.top||(e as MouseEvent).clientY>r.bottom)closeOverlay();}});}
 async function showLookup(word:string,context='',annotated='',target=false,anchor?:HTMLElement){
@@ -358,18 +372,82 @@ async function submitAnswer(){if(!quiz||quiz.selected<0||quiz.submitted)return;q
 function nextQuiz(){if(!quiz)return;if(quiz.index+1<quiz.questions.length){quiz.index++;quiz.selected=-1;quiz.submitted=false;drawQuiz();}else{const attempts=s().attempts.filter(a=>[...quiz!.answers.values()].includes(a.id)),correct=attempts.filter(a=>a.correct).length;modal('本轮练习完成',`<div class="quiz-result"><span class="result-icon correct">${icon('check')}</span><h3>又多了一次语境里的相遇</h3><p>完成 ${attempts.length} 题，答对 ${correct} 题。</p><p class="muted">一次答对记录本次表现，掌握状态需经过多次间隔复习。</p></div><div class="modal-actions">${button('close','继续阅读','','btn subtle')}<a class="btn primary" href="#history" data-action="close">查看测试记录 ${icon('arrow')}</a></div>`);quiz=undefined;render();}}
 function showAttempt(id:string){const a=s().attempts.find(a=>a.id===id);if(!a)return;const q=a.question;modal('首次答题记录',`<p class="quiz-context" lang="en">${esc(q.context)}</p><p lang="en">${esc(q.prompt)}</p>${q.options.map((o,i)=>`<div class="record-option ${i===q.answer?'correct':''}"><strong>${'ABCD'[i]}</strong> <span lang="en">${esc(o)}</span> ${i===a.selected?'（你的首次答案）':''}${i===q.answer?'（正确项）':''}<p>${esc(q.explanations[i])}</p></div>`).join('')}<p class="muted">${new Date(a.submittedAt).toLocaleString('zh-CN')} · ${a.effective?'有效复习':'额外练习'}</p>`,true);}
 function exportArticleRequest(setId=activeSet){const set=s().sets.find(t=>t.id===setId);if(!set||!set.targets.length){announce('请先创建并选择有单词的词汇表');return;}const words=set.targets.map(t=>{const se=senseById(t.senseId)?.sense;return `- ${t.emphasized?'**'+t.word+'**':t.word}：${se?meaning(se):'未提供词义'}`;}).join('\n');download(set.name+'-文章生成请求.md',`# 阅读文章生成请求\n\n请使用以下词汇及指定中文词义，创作 5 篇内容不同、自然连贯的英文阅读文章。每一篇英文正文都必须完整包含所有单词或短语，保持原词形；加粗与常考词义优先，不擅自替换用户释义。可根据词量调整篇幅。\n\n只输出英文标题和英文段落，不附加词表、中文翻译、题目或说明。每篇使用 # 标题，文章之间用单独一行 --- 分隔，段落之间空一行，以便批量导入阅读工具。\n\n## 词汇表：${set.name}\n${words}\n`,'text/markdown;charset=utf-8');}
-function wordImportForm(inline=false){return `<form id="word-import-form"><label>词表名称<input name="name" maxlength="100" value="我的词表" required></label><label>单词与词义<textarea name="words" rows="${inline?'5':'8'}" required placeholder="camera n. 照相机&#10;lens：镜头"></textarea></label><div class="pos-import"><button type="button" class="text-btn" data-fill-pos hidden>AI 补全词性</button><span class="pos-status" role="status"></span></div><div id="word-import-error" role="alert"></div><div class="modal-actions"><button class="btn primary" type="submit">${icon('plus')}保存词表</button></div></form>`;}
-function wordImport(){modal('新建词汇表',wordImportForm(),true);bindWordForm(overlay.querySelector('#word-import-form'));}
+// Older imports grouped lists into one immutable batch. Preserve its raw input on each list when the user edits it.
+function detachImportBatch(state:UserState,setId:string){
+ const batchId=state.sets.find(set=>set.id===setId)?.importBatchId;if(!batchId)return;
+ const batch=state.importBatches.find(b=>b.id===batchId);
+ for(const list of state.sets.filter(set=>set.importBatchId===batchId)){
+  list.markdown||=batch?.raw;delete list.importBatchId;delete list.groupIndex;delete list.entryIds;delete list.articleId;
+ }
+ for(const article of state.articles)if(article.importBatchId===batchId)delete article.importBatchId;
+ for(const task of state.generationTasks)if(task.batchId===batchId)delete task.batchId;
+ state.importEntries=state.importEntries.filter(e=>e.batchId!==batchId);state.importBatches=state.importBatches.filter(b=>b.id!==batchId);
+}
+function wordImportForm(inline=false,setId=''){
+ const options=['CET-4','CET-6','IELTS'].map(m=>`<option ${exam===m?'selected':''}>${m}</option>`).join('');
+ return `<form id="word-import-form" data-set="${esc(setId)}">${setId?'':'<label>词表名称<input name="name" maxlength="100" value="我的词表" required></label>'}<label>单词与词义<textarea name="words" rows="${inline?'5':'8'}" required placeholder="camera（n.）：照相机&#10;C++：一种编程语言"></textarea></label><div class="import-options"><button class="pos-switch" type="button" data-fill-pos role="switch" aria-checked="${!!s().settings.autoPos}"><i aria-hidden="true"></i>AI 补全词性</button><label>阅读难度<select name="mode">${options}</select></label></div><div id="word-import-error" role="alert"></div><div class="modal-actions import-actions"><button class="btn subtle" type="submit">${icon('plus')}${setId?'添加到词表':'仅保存词表'}</button><button class="btn primary" type="submit" value="generate">${icon('book')}导入并生成阅读和题目</button></div></form>`;
+}
+function wordImport(setId=''){
+ modal(setId?'添加单词与词义':'新建词汇表',wordImportForm(false,setId),true);
+ bindWordForm(overlay.querySelector('#word-import-form'));
+}
 function updateWordPreview(){
  const preview=document.getElementById('word-preview'),raw=app.querySelector<HTMLTextAreaElement>('#word-import-form textarea')?.value.trim();
  if(!preview)return;
  let words:GenerationWord[]=[];try{words=raw?parseGenerationWords(raw).words:[{word:'camera',zh:'照相机',pos:'n.'},{word:'lens',zh:'镜头'}];}catch{/* An incomplete paste is validated on submit. */}
  document.getElementById('sample-heading')!.textContent=raw?'目标词预览':'词表格式示例';
- preview.innerHTML=words.slice(0,4).map(w=>{const art=wordArt(w.word);return `<div class="preview-entry${art?' with-object':''}">${art?`<img class="entry-object" src="${art.image}" alt="" draggable="false">`:''}<strong lang="en">${esc(w.word)}</strong><span>${esc(w.pos||generatedPos(app.querySelector<HTMLFormElement>('#word-import-form')!,w.word))} ${markdownInline(w.zh||'待补充词义')}</span></div>`}).join('')||'<p>每行输入一个单词和词义</p>';
+ preview.innerHTML=words.slice(0,4).map(w=>{const art=wordArt(w.word);return `<div class="preview-entry${art?' with-object':''}">${art?`<img class="entry-object" src="${art.image}" alt="" draggable="false">`:''}<strong lang="en">${esc(w.word)}</strong><span>${esc(w.pos||'')} ${markdownInline(w.zh||'待补充词义')}</span></div>`}).join('')||'<p>每行输入一个单词和词义</p>';
 }
 document.addEventListener('submit',async e=>{
- const form=e.target as HTMLFormElement;if(form.id!=='word-import-form')return;
- e.preventDefault();try{const f=new FormData(e.target as HTMLFormElement),raw=String(f.get('words')),parsed=parseGenerationWords(raw);if(!parsed.words.length||parsed.overLimit||parsed.invalid.length)throw Error('请检查词表，单次最多 200 个有效单词或短语');const setId=uid(),custom:Lexeme[]=[],targets:Target[]=[];for(const w of parsed.words){const existing=previousImportSense(w),pos=w.pos||generatedPos(form,w.word);if(existing&&(!pos||knownPos(existing)===pos)){targets.push({word:w.word,senseId:existing.id,emphasized:w.emphasized});continue;}const id='user-s-'+uid();custom.push({id:'user-'+uid(),lemma:w.word,ipa:{},senses:[{id,pos:pos||'',en:'',zh:w.zh||(existing?meaning(existing):'释义待补充（用户导入）'),source:'user',status:'用户导入'}]});targets.push({word:w.word,senseId:id,emphasized:w.emphasized});}if(await change(d=>{d.custom.push(...custom);d.sets.push({id:setId,name:String(f.get('name')),targets,source:'用户词表',markdown:raw,updatedAt:now()});})){resolver=new RuleSenseResolver(lexemes(),data.content.forms);closeOverlay();activeSet=setId;render();announce('词表已保存，采用你最新导入的词义');}}catch(error){form.querySelector('#word-import-error')!.textContent=(error as Error).message;}
+ const form=e.target as HTMLFormElement;
+ if(form.id==='reading-quiz-form'){
+  e.preventDefault();const a=article();if(!a)return;
+  try{await submitReading(repo,a);paintQuiz(true);}catch(err){form.querySelector('#reading-quiz-error')!.textContent=(err as Error).message;}
+  return;
+ }
+ if(form.id!=='word-import-form')return;
+ e.preventDefault();if(form.dataset.busy)return;
+ const wantsReading=(e.submitter as HTMLButtonElement)?.value==='generate';
+ const autoPos=form.querySelector('[data-fill-pos]')?.getAttribute('aria-checked')==='true';
+ try{
+  const fields=new FormData(form),raw=String(fields.get('words')),parsed=parseGenerationWords(raw);
+  if(parsed.invalid.length)throw Error('请检查这些词条：'+parsed.invalid.slice(0,4).join('、'));
+  if(!parsed.words.length||parsed.overLimit)throw Error('每次可添加 1–200 个单词或短语。');
+  const setId=form.dataset.set||uid(),mode=String(fields.get('mode')) as Mode;
+  if(wantsReading||autoPos)connectFileStudy();
+  form.dataset.busy='true';
+  await repo.commit(d=>{
+   let set=d.sets.find(x=>x.id===setId);
+   if(!set){
+    if(form.dataset.set)throw Error('词汇表已被删除');
+    const name=String(fields.get('name')||'').trim();if(!name)throw Error('请填写词表名称');
+    set={id:setId,name,source:'用户词表',targets:[],updatedAt:now()};d.sets.push(set);
+   }
+   detachImportBatch(d,setId);
+   const byWord=new Map(set.targets.map(t=>[normalizeTerm(t.word),t]));
+   for(const w of parsed.words){
+    const key=normalizeTerm(w.word),prior=byWord.get(key);
+    const old=prior?senseById(prior.senseId)?.sense:previousImportSense(w);
+    const same=old&&(!w.zh||w.zh===meaning(old))&&(!w.pos||w.pos===knownPos(old));
+    let sense=old;
+    if(!same){
+     sense={id:'user-s-'+uid(),pos:w.pos||'',en:'',zh:w.zh||(old?meaning(old):'释义待补充（用户导入）'),source:'user',status:'用户导入'};
+     d.custom.push({id:'user-'+uid(),lemma:w.word,ipa:{},senses:[sense]});
+    }
+    const target={word:w.word,senseId:sense!.id,emphasized:w.emphasized||prior?.emphasized};
+    if(prior)Object.assign(prior,target);else{set.targets.push(target);byWord.set(key,target);}
+    if(autoPos&&!knownPos(sense!)&&d.custom.some(l=>l.senses.some(se=>se.id===sense!.id))){
+     set.pendingPos||=[];if(!set.pendingPos.includes(sense!.id))set.pendingPos.push(sense!.id);
+    }
+   }
+   set.markdown=[set.markdown,raw].filter(Boolean).join('\n');set.updatedAt=now();d.settings.autoPos=autoPos;
+  });
+  resolver=new RuleSenseResolver(lexemes(),data.content.forms);if(overlay.contains(form))closeOverlay();
+  activeSet=setId;search='';render();announce(form.dataset.set?'已添加到词表':'词表已保存');
+  if(autoPos)void posJobs.run(setId);
+  if(wantsReading)void generateList(setId,mode);
+ }catch(error){form.querySelector('#word-import-error')!.textContent=(error as Error).message;}
+ finally{delete form.dataset.busy;}
 });
 function generatedArticleNavigation(a:Article){const match=a.id.match(/^((?:generated|import-batch)-.+)-\d+$/);const siblings=a.batchId?articles().filter(x=>x.batchId===a.batchId):match?articles().filter(x=>x.id.startsWith(match[1]+'-')):[];if(siblings.length<2)return '';return `<label class="batch-select"><select id="batch-article" aria-label="切换本批文章">${siblings.map((x,i)=>`<option value="${esc(x.id)}" ${x.id===a.id?'selected':''}>第 ${i+1} / ${siblings.length} 篇</option>`).join('')}</select></label>`;}
 
@@ -378,7 +456,7 @@ async function deleteItems(ids:string[]){const removed=s().vocabulary.filter(v=>
 document.addEventListener('click',async e=>{const target=e.target as HTMLElement;const action=target.closest<HTMLElement>('[data-action]');if(!action){if(overlay.querySelector('.word-card')&&!target.closest('.word-card'))closeOverlay();return;}const name=action.dataset.action!;const menu=action.closest<HTMLDetailsElement>('.reading-more');if(menu){menu.open=false;menu.querySelector('summary')?.focus();}const a=article();try{
  switch(name){
  case 'close':closeOverlay();break;
- case 'prepare-reading':if(a)void prepareReading(a,(word,context)=>resolver.lookup(word,context).senses.some(x=>(x.source==='user'||personal(x.id))&&!x.zh.startsWith('释义待补充')),liveUI,true);break;
+ case 'prepare-reading':connectFileStudy();if(a)void prepareReading(a,(word,context)=>resolver.lookup(word,context).senses.some(x=>(x.source==='user'||personal(x.id))&&!x.zh.startsWith('释义待补充')),liveUI,true);break;
  case 'live-settings':void showServiceSettings(liveUI);break;
  case 'direct-query':modal('直接查询',`<form id="direct-query-form"><label>英文单词或短语<input name="word" required maxlength="100" placeholder="例如 in that"></label><div class="modal-actions"><button class="btn primary" type="submit">查询</button></div></form>`);overlay.querySelector('form')!.addEventListener('submit',e=>{e.preventDefault();const word=String(new FormData(e.target as HTMLFormElement).get('word')).trim();if(word)void showLookup(word);});break;
  case 'speak-word':speakEnglish(action.dataset.text||'');break;
@@ -394,14 +472,21 @@ document.addEventListener('click',async e=>{const target=e.target as HTMLElement
  case 'lookup':{const context=action.dataset.context||a?.paragraphs[Number(action.dataset.p)]?.en||'';await showLookup(action.dataset.word!,context,action.dataset.sense||'',!!action.dataset.sense,action);break;}
  case 'target-word':await showLookup(action.dataset.word!,a?.paragraphs.find(p=>p.en.toLowerCase().includes(action.dataset.word!.toLowerCase()))?.en||'',action.dataset.sense!,true,action);break;
  case 'save-word':await toggleSense(action);break;
- case 'fill-sense-pos':await fillSensePos(action as HTMLButtonElement);break;
+ case 'fill-sense-pos':connectFileStudy();await fillSensePos(action as HTMLButtonElement);break;
  case 'edit-word':editSense(action.dataset.sense!);break;
  case 'add-word':addWord(action.dataset.word||'');break;
  case 'new-set':wordImport();break;
+ case 'append-words':wordImport(activeSet);break;
+ case 'generate-set':connectFileStudy();void generateList(action.dataset.set||activeSet,exam);break;
+ case 'retry-pos':connectFileStudy();void posJobs.run(action.dataset.set!);break;
+ case 'resume-generation':connectFileStudy();void generation.resume(action.dataset.id!).catch(e=>announce(e.message));break;
+ case 'cancel-generation':void generation.cancel(action.dataset.id!).catch(e=>announce(e.message));break;
+ case 'generate-questions':if(a){connectFileStudy();void generation.questions(a.id,(document.querySelector<HTMLSelectElement>('#question-difficulty')?.value||a.mode) as Mode).catch(e=>announce(e.message));}break;
+ case 'reset-reading-quiz':if(a){await resetReading(repo,a);paintQuiz(true);}break;
  case 'set':activeSet=action.dataset.id!;search='';render();break;
  case 'filter-status':wordFilter=action.dataset.filter!;selected.clear();refreshNotebook();app.querySelector<HTMLElement>('[data-filter="'+wordFilter+'"]')?.focus({preventScroll:true});break;
  case 'clear-notebook':wordFilter='all';selected.clear();search='';render();app.querySelector<HTMLElement>('#search')?.focus();break;
- case 'delete-set':if(activeSet&&await change(d=>{d.sets=d.sets.filter(t=>t.id!==activeSet)},'集合已删除')){activeSet='';render();}break;
+ case 'delete-set':{const jobs=s().generationTasks.filter(t=>t.groupId===activeSet);if(activeSet&&await change(d=>{detachImportBatch(d,activeSet);d.sets=d.sets.filter(t=>t.id!==activeSet);d.generationTasks=d.generationTasks.filter(t=>t.groupId!==activeSet);for(const a of d.articles)if(a.setId===activeSet)delete a.setId},'集合已删除')){generation.stopRemovedTasks(jobs);activeSet='';render();}break;}
  case 'export-markdown':{const set=s().sets.find(t=>t.id===activeSet);if(set?.markdown)download('ContextFlow-原始词表.md',set.markdown,'text/markdown;charset=utf-8');break;}
 
  case 'import-words':importWords();break;
@@ -432,7 +517,7 @@ document.addEventListener('click',async e=>{const target=e.target as HTMLElement
  }
  }catch(err){announce(err instanceof Error?err.message:'操作未完成，请重试');}
 });
-document.addEventListener('change',async e=>{const el=e.target as HTMLInputElement;if(el.id==='batch-article'){const a=articles().find(x=>x.id===el.value);if(a&&await change(d=>{d.settings.lastArticle=a.id;d.settings.mode=a.mode})){currentArticle=a.id;activeSet=a.setId||'';render();}}else if(el.id==='topic'){topic=el.value;currentArticle='';render();}else if(el.id==='length'){length=el.value;currentArticle='';render();}else if(el.id==='active-set'){activeSet=el.value;currentArticle='';render();}else if(el.id==='word-filter'){wordFilter=el.value;selected.clear();refreshNotebook();}else if(el.id==='sort'){sort=el.value;refreshNotebook();}else if(el.dataset.notebookStatus){
+document.addEventListener('change',async e=>{const el=e.target as HTMLInputElement;if(el.dataset.readingQuestion!==undefined){const a=article();if(a)await answerReading(repo,a,Number(el.dataset.readingQuestion),Number(el.value));return;}if(el.id==='batch-article'){const a=articles().find(x=>x.id===el.value);if(a&&await change(d=>{d.settings.lastArticle=a.id;d.settings.mode=a.mode})){currentArticle=a.id;activeSet=a.setId||'';render();}}else if(el.id==='topic'){topic=el.value;currentArticle='';render();}else if(el.id==='length'){length=el.value;currentArticle='';render();}else if(el.id==='active-set'){activeSet=el.value;currentArticle='';render();}else if(el.id==='word-filter'){wordFilter=el.value;selected.clear();refreshNotebook();}else if(el.id==='sort'){sort=el.value;refreshNotebook();}else if(el.dataset.notebookStatus){
  const mark=({mastered:'mastered',learning:'pass',due:'again'} as const)[el.value as NotebookStatus];
  await saveCardCheck(el.dataset.notebookStatus,mark);refreshNotebook();
  }else if(el.id==='motion-mode'){setMotionMode(el.value);}
@@ -466,7 +551,51 @@ document.addEventListener('keydown',e=>{
 document.addEventListener('pointerdown',e=>{const m=document.querySelector<HTMLDetailsElement>('.reading-more[open]');if(m&&!m.contains(e.target as Node))m.open=false;});
 window.addEventListener('resize',()=>{if(overlay.querySelector('.word-card'))closeOverlay();});
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applyTheme);
-async function init(){await repo.init();if(!s().libraryReset015){await repo.commit(d=>{const kept=new Set([...d.vocabulary.map(v=>v.senseId),...d.attempts.map(a=>a.question.senseId)]);d.sets=[];d.custom=d.custom.filter(l=>l.senses.some(se=>kept.has(se.id)));d.libraryReset015=true;});}resolver=new RuleSenseResolver(lexemes(),data.content.forms);exam=s().settings.mode;currentArticle=s().settings.lastArticle||'article-1-1';render();if(repo.mode==='临时模式')announce(repo.detail);}
-void init();
+async function init(){await repo.init();if(!s().libraryReset015){await repo.commit(d=>{d.libraryReset015=true;});}resolver=new RuleSenseResolver(lexemes(),data.content.forms);exam=s().settings.mode;currentArticle=s().settings.lastArticle||'article-1-1';render();void generation.recover();if(location.protocol!=='file:')for(const set of s().sets)if(set.pendingPos?.length)void posJobs.run(set.id);if(repo.mode==='临时模式')announce(repo.detail);}
+const listMessages=new Map<string,string>();
+const starting=new Set<string>();
+const generation=new GenerationQueue(repo,paintStudy,
+ a=>{if(route()==='read'&&!app.querySelector('.reading-paper')&&(!activeSet||activeSet===a.setId)){exam=a.mode;currentArticle=a.id;render();}},
+ a=>void prepareReading(a,(word,context)=>resolver.lookup(word,context).senses.some(x=>x.source==='user'||!!personal(x.id)),liveUI));
+const posJobs=new PosJobs(repo,paintStudy);
+async function generateList(setId:string,mode:Mode){
+ if(starting.has(setId))return;
+ const list=s().sets.find(x=>x.id===setId);if(!list)return;
+ starting.add(setId);listMessages.set(setId,'正在连接阅读服务…');paintStudy();
+ try{
+  const targets=list.targets.map(t=>({...t,zh:meaningForTarget(t)}));
+  await generation.vocabulary(setId,targets,mode);listMessages.delete(setId);
+ }catch(error){listMessages.set(setId,(error as Error).message);}
+ finally{starting.delete(setId);paintStudy();}
+}
+function meaningForTarget(t:Target){
+ const obj=senseById(t.senseId);const zh=obj?meaning(obj.sense):'';return zh.startsWith('释义待补充（用户导入）')?'':zh;
+}
+function studyPanel(setId:string){return `<div class="study-jobs" data-study-set="${esc(setId)}" aria-live="polite">${studyStatus(setId)}</div>`;}
+function studyStatus(setId:string){
+ const list=s().sets.find(set=>set.id===setId);if(!list)return '';
+ const rows:string[]=[],message=listMessages.get(setId);
+ if(message)rows.push(`<div><span>阅读 · ${esc(message)}</span>${starting.has(setId)?'':button('live-settings','连接模型','arrow','text-btn')}</div>`);
+ if(list.pendingPos?.length){
+  const error=posJobs.errors.get(setId);
+  rows.push(`<div><span>词性 · ${error?esc(error):'待补全 '+list.pendingPos.length+' 项'}</span>${(error||location.protocol==='file:')?button('retry-pos','继续补全','arrow','text-btn',`data-set="${esc(setId)}"`):''}</div>`);
+ }
+ for(const task of s().generationTasks.filter(t=>t.groupId===setId)){
+  const article=s().articles.find(a=>a.id===task.articleId),attrs=`data-id="${esc(task.id)}"`;
+  rows.push(`<div><span>${esc(article?.title||task.targets[0]?.word||'阅读')} · ${esc(task.message)}</span>${article?button('open-generated','阅读','book','text-btn',`data-id="${esc(article.id)}"`):''}${task.status==='completed'?'':['failed','interrupted','cancelled'].includes(task.status)?button('resume-generation','重试','arrow','text-btn',attrs):button('cancel-generation','取消','','text-btn',attrs)}</div>`);
+ }
+ return rows.join('');
+}
+function paintQuiz(force=false){
+ const box=document.querySelector<HTMLElement>('#reading-quiz'),a=article();if(!box||!a)return;
+ const key=JSON.stringify([a.id,a.readingQuestionSetId,s().generationTasks.filter(t=>t.articleId===a.id).map(t=>[t.status,t.message])]);
+ if(force||key!==box.dataset.version){box.innerHTML=quizMarkup(s(),a,esc);box.dataset.version=key;}
+}
+function paintStudy(){
+ for(const box of app.querySelectorAll<HTMLElement>('[data-study-set]')){const html=studyStatus(box.dataset.studySet!);if(box.innerHTML!==html)box.innerHTML=html;}
+ paintQuiz();
+}
+
+void init().catch(err=>{app.textContent="学习数据加载失败："+err.message;});
 
 document.addEventListener('cf-reading-ready',()=>{if(route()!=='read')return;document.querySelectorAll('.paragraph .translation>p').forEach((node,i)=>{const p=article()?.paragraphs[i];if(p&&!p.zh){const translated=cachedParagraph(p.en);if(translated)node.textContent=translated;}});});
