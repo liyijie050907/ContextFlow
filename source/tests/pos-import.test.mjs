@@ -26,3 +26,8 @@ test('batch model tags stay paired with the original entries, including unknowns
     await assert.rejects(()=>inferPartsOfSpeech(items,async()=>JSON.stringify({items:tags})));
   }
 });
+
+test('accepts wrapped and symbolic entries and preserves meaning punctuation',()=>{
+ const cases=[['1）(gene)：基因（遗传单位）','gene','基因（遗传单位）'],['【camera】（n.）：照相机','camera','照相机'],['[lens]：镜头','lens','镜头'],['durable） 耐用的','durable','耐用的'],['(un)likely：可能的','(un)likely','可能的'],['C++：编程语言','C++','编程语言'],['R&D → 研发','R&D','研发'],['COVID-19：新冠','COVID-19','新冠'],['3D：三维','3D','三维'],['∞：无穷','∞','无穷']];
+ for(const [raw,word,zh] of cases){const parsed=parseGenerationWords(raw);assert.deepEqual(parsed.invalid,[],raw);assert.equal(parsed.words[0].word,word,raw);assert.equal(parsed.words[0].zh,zh,raw);}
+});

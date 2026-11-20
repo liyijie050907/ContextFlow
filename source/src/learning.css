@@ -462,3 +462,23 @@ html[data-motion=full] :is(.btn,.text-btn,.round-btn,.icon-btn,.lex-favorite,.gr
 html[data-motion=full] :is(button:not(:disabled),.btn,.app-nav a,summary):active {scale:.945;}
 html[data-motion=reduce] .target-cursor,html[data-motion=reduce] .title-net {display:none;}
 @media(max-width:600px){.article-pagination {align-items:flex-start;}.article-pagination>.button-row{justify-content:flex-start;}.article-pagination .btn {font-size:12px;padding:9px 11px;}.edge-blur{height:29px;}.notebook-summary{gap:4px;}.notebook-summary button{padding-inline:7px;}}
+
+/* Pill controls use the fill-and-press motion of React Bits' Pill Nav. */
+.import-options,.import-actions,.word-workspace>.button-row{display:flex;flex-wrap:wrap;align-items:center;gap:.65rem}
+.import-options{justify-content:space-between;margin:.8rem 0}
+.import-options label{display:flex;align-items:center;gap:.55rem;margin:0}
+.pos-switch{display:inline-flex;align-items:center;gap:.6rem;border:1px solid var(--line);border-radius:999px;padding:.55rem .85rem;min-height:44px;background:var(--surface);color:inherit;font:inherit;cursor:pointer}
+.pos-switch i{position:relative;width:2.25rem;height:1.24rem;border-radius:1rem;background:color-mix(in srgb,currentColor 26%,transparent)}
+.pos-switch i::after{content:"";position:absolute;inset:.16rem auto auto .16rem;width:.92rem;height:.92rem;border-radius:100%;background:var(--paper,#fff);box-shadow:0 1px 3px #0004}
+.pos-switch[aria-checked=true] i{background:var(--accent,#9379c9)}
+.pos-switch[aria-checked=true] i::after{transform:translateX(1rem)}
+.study-jobs:empty{display:none}.study-jobs{margin:.9rem 0;display:grid;gap:.45rem}
+.study-jobs>div{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;border-inline-start:3px solid var(--accent,#aa91d1);padding:.3rem .7rem}
+.study-jobs span{flex:1 1 12rem;min-width:0;overflow-wrap:anywhere}
+.study-quiz{margin-top:1.4rem;padding-top:1rem;border-top:1px solid var(--line)}
+.study-quiz h2 small{font:normal .8rem system-ui}.reading-question{min-width:0;margin:1.3rem 0;padding:0;border:0}.reading-question legend{font-weight:650;line-height:1.5}
+.reading-answer{display:flex!important;gap:.7rem;align-items:baseline;padding:.55rem .7rem;min-height:44px;border:1px solid var(--line);border-radius:.8rem;margin:.45rem 0;cursor:pointer}
+.reading-answer input{width:auto;flex:none}.reading-answer:has(:checked),.correct-answer{background:color-mix(in srgb,var(--accent,#aa91d1) 17%,transparent)}.reading-explanation{line-height:1.65}
+@media(prefers-reduced-motion:no-preference){.pos-switch,.pos-switch i,.pos-switch i::after,.import-actions button,.reading-answer{transition:transform 220ms cubic-bezier(.2,.8,.25,1.2),background-color 180ms,box-shadow 180ms}.pos-switch:active,.import-actions button:active{transform:scale(.96)}}
+@media(hover:hover) and (prefers-reduced-motion:no-preference){.pos-switch:hover,.import-actions button:hover,.reading-answer:hover{transform:translateY(-2px);box-shadow:0 3px 12px color-mix(in srgb,var(--accent,#aa91d1) 20%,transparent)}}
+@media(max-width:480px){.import-actions .btn{white-space:normal;flex:1 1 100%;justify-content:center}.word-workspace>.button-row>.btn{max-width:100%;white-space:normal}.study-quiz{padding-inline:0}}

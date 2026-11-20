@@ -8,18 +8,18 @@ function Get-ContextFlowHealth {
 try {
     . (Join-Path $PSScriptRoot 'network.ps1')
     Set-ContextFlowNetwork
-    if (-not (Test-Path -LiteralPath $runtimePath)) { throw 'node.exe is missing. Extract the complete ContextFlow package before starting.' }
+    if (-not (Test-Path -LiteralPath $runtimePath)) { $runtimePath = (Get-Command node.exe -ErrorAction Stop).Source }
     $health = Get-ContextFlowHealth
-    if ($health -and $health.app -eq 'ContextFlow' -and $health.version -ne '0.17.0') {
+    if ($health -and $health.app -eq 'ContextFlow' -and (-not $health.fileStudyReady)) {
         if ($health.active) { throw 'The assistant is generating. Wait for completion or cancel it before updating.' }
-        $oldHelpers = Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" | Where-Object { $_.ExecutablePath -eq $runtimePath -and $_.CommandLine -match 'server\.mjs' }
+        $oldHelpers = Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" | Where-Object { $_.ExecutablePath -eq $runtimePath -and ($_.CommandLine -match [regex]::Escape((Join-Path $PSScriptRoot 'server.mjs')) -or $_.ExecutablePath -eq (Join-Path $PSScriptRoot 'node.exe')) }
         if (-not $oldHelpers) { throw 'An older ContextFlow assistant is running from another folder. Run its Stop-ContextFlow.cmd before starting this version.' }
         foreach ($oldHelper in $oldHelpers) { Stop-Process -Id $oldHelper.ProcessId }
         Start-Sleep -Milliseconds 300
         $health = $null
     }
     if (-not $health -or $health.app -ne 'ContextFlow') {
-        $child = Start-Process -FilePath $runtimePath -ArgumentList '--use-system-ca','--use-env-proxy','server.mjs' -WorkingDirectory $PSScriptRoot -WindowStyle Hidden -PassThru
+        $child = Start-Process -FilePath $runtimePath -ArgumentList '--use-system-ca','--use-env-proxy',('"' + (Join-Path $PSScriptRoot 'server.mjs') + '"') -WorkingDirectory $PSScriptRoot -WindowStyle Hidden -PassThru
         for ($attempt = 0; $attempt -lt 30; $attempt++) {
             Start-Sleep -Milliseconds 200
             $health = Get-ContextFlowHealth

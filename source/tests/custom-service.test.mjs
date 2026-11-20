@@ -4,7 +4,7 @@ import {mkdtemp,copyFile,writeFile,readFile} from 'node:fs/promises';import {tmp
 test('isolated custom services support all learning routes and restore encrypted configuration', {skip:process.platform!=='win32',timeout:60000},async()=>{
  const root=await mkdtemp(join(tmpdir(),'ContextFlow-provider-test-')),source=resolve('../assistant');
  const probe=http.createServer();await new Promise(r=>probe.listen(0,'127.0.0.1',r));const port=probe.address().port;await new Promise(r=>probe.close(r));const base='http://127.0.0.1:'+port;
- for(const file of ['network.mjs','generation-core.mjs','lookup-policy.mjs','reading-preparation.mjs','parts-of-speech.mjs','providers.mjs'])await copyFile(join(source,file),join(root,file));
+ for(const file of ['network.mjs','generation-core.mjs','group-core.mjs','group-generation.mjs','generation-store.mjs','lookup-policy.mjs','reading-preparation.mjs','parts-of-speech.mjs','providers.mjs'])await copyFile(join(source,file),join(root,file));
  await writeFile(join(root,'server.mjs'),(await readFile(join(source,'server.mjs'),'utf8')).replaceAll('17863',String(port)));
  const built=await build({entryPoints:['src/generation.ts'],bundle:true,format:'esm',platform:'node',write:false});const G=await import('data:text/javascript;base64,'+Buffer.from(built.outputFiles[0].text).toString('base64'));
  const scenes=[['farmer','planted','orchard','harvest'],['engineer','measured','laboratory','instrument'],['teacher','explained','classroom','lesson'],['traveller','carried','harbour','voyage'],['curator','displayed','gallery','painting']];let protocol='chat-completions',calls=0;

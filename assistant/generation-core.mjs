@@ -25,6 +25,59 @@ function meaningfulPos(value) {
   return /^(?:未注明|未标注|未知|unknown|n\/a|—|-)$/i.test(clean) ? "" : clean;
 }
 
+// src/vocabulary-term.ts
+function normalizeTerm(text) {
+  return text.normalize("NFKC").replace(/[’‘]/g, "'").replace(/[‐‑‒–−]/g, "-").replace(/\s+/g, " ").trim().toLowerCase();
+}
+function isVocabularyTerm(value) {
+  return typeof value === "string" && value.trim().length > 0 && value.length <= 100 && !/[\p{Cc}]/u.test(value);
+}
+function containsVocabularyTerm(text, term2) {
+  const word = normalizeTerm(term2);
+  if (!word) return false;
+  const escape = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const left = /^[\p{Script=Latin}\p{N}_'-]/u.test(word) ? "(?<![\\p{Script=Latin}\\p{N}_'-])" : "";
+  const right = /[\p{Script=Latin}\p{N}_'+#-]$/u.test(word) ? "(?![\\p{Script=Latin}\\p{N}_'+#-])" : "";
+  return new RegExp(left + escape + right, "u").test(normalizeTerm(text));
+}
+
+// src/vocabulary-line.ts
+var validImportTerm = (word) => isVocabularyTerm(word) && (/[\p{Script=Latin}]/u.test(word) || /^[\p{S}\p{P}]+$/u.test(word)) && !new RegExp("\\p{Script=Han}", "u").test(word);
+var pairs = { "(": ")", "\uFF08": "\uFF09", "[": "]", "\u3010": "\u3011", "<": ">", "\u300A": "\u300B", "\u300E": "\u300F", "\u300C": "\u300D", "\u201C": "\u201D", '"': '"', "\u2018": "\u2019", "`": "`" };
+function cleanHead(raw) {
+  let word = raw.trim().replace(/^(\*\*|__)(.+)\1$/, "$2");
+  while (pairs[word[0]] && word.endsWith(pairs[word[0]])) word = word.slice(1, -1).trim();
+  for (const [open, close] of Object.entries(pairs)) {
+    while (open !== close && word.startsWith(open) && word.split(open).length > word.split(close).length) word = word.slice(1).trim();
+    while (open !== close && word.endsWith(close) && word.split(close).length > word.split(open).length) word = word.slice(0, -1).trim();
+  }
+  return word.replace(/[’‘]/g, "'");
+}
+function vocabularyLine(raw) {
+  const line = raw.trim().replace(/^(?:[-*•●▪·]\s+|[（(]?\d+[.)）．、:：]\s*)/, "").trim();
+  if (!line || /^(?:[-=_—─]{3,}|单词表|词汇表|第\s*\d+\s*页)$/u.test(line)) return [];
+  const tagged2 = parseTaggedLine(line);
+  if (tagged2) return [tagged2];
+  const split = line.match(new RegExp("^(.+?)\\s*(?:[:\uFF1A\\t]|(?:=>|->|\u2192|\u21D2)|\\s+[\u2014\u2013-]\\s+|[\u2014\u2013](?=\\s*\\p{Script=Han})|[\uFF0C,;\uFF1B\u3001=|](?=\\s*[\\p{Script=Han}\uFF08(]))\\s*(.+)$", "u"));
+  const mixed = line.match(/^(.+?)\s*([（(【\[]?[\p{Script=Han}].*)$/u);
+  const match = split || mixed;
+  if (match) {
+    let head = match[1].trim(), meaning = match[2].trim();
+    const tag = head.match(/[(（\[]([^()（）\[\]]{1,36})[)）\]]?$/);
+    let pos = "";
+    if (tag && inlinePartOfSpeech(tag[1]) === tag[1].trim()) {
+      pos = tag[1];
+      head = head.slice(0, tag.index).trim();
+    }
+    const wrapped = pairs[meaning[0]];
+    if (!split && wrapped && meaning.endsWith(wrapped)) meaning = meaning.slice(1, -1);
+    const word = cleanHead(head);
+    const prefixed = parseTaggedLine("term " + meaning);
+    return [{ word, zh: prefixed?.zh ?? meaning, pos: pos || prefixed?.pos }];
+  }
+  return line.split(/[\s,，;；、]+/).filter(Boolean).map((token) => ({ word: cleanHead(token), zh: "" }));
+}
+
 // src/markdown.ts
 function parseMarkdownVocabulary(input) {
   const words = [];
@@ -46,8 +99,8 @@ function parseMarkdownVocabulary(input) {
       }
       if (cells.every((c) => /^:?-+:?$/.test(c))) continue;
       const w = cells[0].replace(/[*_`]/g, "").trim();
-      if (/^[A-Za-z]+(?:[ '’-][A-Za-z]+)*$/.test(w)) {
-        add(w, cells.filter((_, i) => i !== 0 && i !== posIndex).join(" \xB7 "), /\*\*|__/.test(cells[0]), posIndex >= 0 ? cells[posIndex] : void 0);
+      if (validImportTerm(w)) {
+        add(cleanHead(w), cells.filter((_, i) => i !== 0 && i !== posIndex).join(" \xB7 "), /\*\*|__/.test(cells[0]), posIndex >= 0 ? cells[posIndex] : void 0);
         continue;
       }
     }
@@ -72,6 +125,12 @@ function parseMarkdownVocabulary(input) {
       add(heading, "", false);
       continue;
     }
+    const labelText = stripped.replace(/^(?:\*\*|__)/, "");
+    const extra = current && (/^(?:n|v[ti]?|adj|adv|prep|pron)\.\s/i.test(labelText) || new RegExp("^[*_]*\\p{Script=Han}", "u").test(labelText)) ? [] : vocabularyLine(stripped);
+    if (extra.length === 1 && validImportTerm(extra[0].word) && (!current || /^#{1,6}\\s/.test(line) || extra[0].zh)) {
+      add(extra[0].word, extra[0].zh, /^(?:\\*\\*|__)/.test(stripped), "pos" in extra[0] ? String(extra[0].pos || "") : void 0);
+      continue;
+    }
     if (/^#{1,6}\s/.test(line)) continue;
     if (current) current.zh += (current.zh ? "\n" : "") + original;
     else invalid.push(original);
@@ -80,7 +139,7 @@ function parseMarkdownVocabulary(input) {
 }
 
 // src/domain.ts
-function parseCSV(text) {
+function parseCSV(text, separator = ",") {
   const rows = [];
   let row = [], field = "", quoted = false;
   for (let i = 0; i < text.length; i++) {
@@ -90,7 +149,7 @@ function parseCSV(text) {
         field += '"';
         i++;
       } else quoted = !quoted;
-    } else if (c === "," && !quoted) {
+    } else if (c === separator && !quoted) {
       row.push(field);
       field = "";
     } else if ((c === "\n" || c === "\r") && !quoted) {
@@ -120,8 +179,8 @@ function validateQuestion(q) {
 // src/generation.ts
 var MAX_GENERATION_WORDS = 200;
 var ARTICLE_COUNT = 5;
-var norm = (s) => s.normalize("NFKC").replace(/[’‘]/g, "'").toLowerCase().trim();
-var validWord = (s) => /^[a-zA-Z]+(?:[ '’-][a-zA-Z]+)*$/.test(s) && s.length <= 80;
+var norm = normalizeTerm;
+var validWord = validImportTerm;
 function parseGenerationWords(text, filename = "") {
   const input = text.replace(/^\uFEFF/, "").trim();
   let entries = [];
@@ -131,35 +190,29 @@ function parseGenerationWords(text, filename = "") {
     const parsed = parseMarkdownVocabulary(input);
     entries = parsed.words;
     markdownInvalid = parsed.invalid;
-  } else if (/^[\[{]/.test(input)) {
+  } else if (/\.json$/i.test(filename) || /^(?:\[\s*[\[{"\]]|\{\s*\")/.test(input)) {
     const raw = JSON.parse(input);
     const list = Array.isArray(raw) ? raw : raw.words;
     if (!Array.isArray(list)) throw Error("JSON \u9700\u8981\u5355\u8BCD\u6570\u7EC4\uFF0C\u6216\u542B words \u6570\u7EC4\u7684\u5BF9\u8C61\u3002");
     entries = list.map((x) => typeof x === "string" ? { word: x, zh: "" } : { word: String(x.word || x.lemma || ""), zh: String(x.zh || x.meaning || ""), pos: String(x.pos || x.partOfSpeech || x["\u8BCD\u6027"] || "") });
-  } else if (/\.csv$/i.test(filename) || /^\s*(word|lemma|单词)\s*,/i.test(input)) {
-    const rows = parseCSV(input), head = rows[0] || [], hasHeader = head.some((x) => /^(word|lemma|单词)$/i.test(x.trim()));
+  } else if (/\.(?:csv|tsv)$/i.test(filename) || /^\s*(word|lemma|term|单词|英文)\s*[,\t]/i.test(input)) {
+    const tabular = /\.tsv$/i.test(filename) || /^[^\n,]+\t/.test(input);
+    const rows = parseCSV(input, tabular ? "	" : ","), head = rows[0] || [], hasHeader = head.some((x) => /^(word|lemma|term|单词|英文)$/i.test(x.trim()));
     const posIndex = hasHeader ? head.findIndex(partOfSpeechHeader) : -1;
-    const wordIndex = hasHeader ? head.findIndex((x) => /^(word|lemma|单词)$/i.test(x.trim())) : 0;
+    const wordIndex = hasHeader ? head.findIndex((x) => /^(word|lemma|term|单词|英文)$/i.test(x.trim())) : 0;
     const meaningIndex = hasHeader ? head.findIndex((x) => /^(zh|meaning|definition|中文|中文释义|释义|词义)$/i.test(x.trim())) : -1;
     if (hasHeader) rows.shift();
     entries = rows.map((row) => ({ word: row[wordIndex] || "", zh: row[meaningIndex >= 0 ? meaningIndex : posIndex === 1 ? 2 : 1] || "", pos: posIndex >= 0 ? row[posIndex] : void 0 }));
   } else {
     for (const line of input.split(/\r?\n/).filter((x) => x.trim())) {
-      const tagged2 = parseTaggedLine(line);
-      if (tagged2) {
-        entries.push(tagged2);
-        continue;
-      }
-      const mixed = line.trim().match(/^([a-zA-Z]+(?:[ '’-][a-zA-Z]+)*)\s*[:：,，\t ]\s*([\u4e00-\u9fff].*)$/);
-      if (mixed) entries.push({ word: mixed[1], zh: mixed[2] });
-      else entries.push(...line.split(/[\s,，;；]+/).filter(Boolean).map((word) => ({ word, zh: "" })));
+      entries.push(...vocabularyLine(line));
     }
   }
   if (entries.length > 1e4) throw Error("\u8F93\u5165\u5185\u5BB9\u8FC7\u591A\uFF0C\u8BF7\u4EC5\u4FDD\u7559\u672C\u8F6E\u6700\u591A 200 \u4E2A\u5355\u8BCD\u3002");
   const words = [], duplicates = [], invalid = [...markdownInvalid], seen = /* @__PURE__ */ new Set();
   for (const item of entries) {
-    const word = item.word.trim().replace(/[’‘]/g, "'");
-    if (!validWord(word) || item.zh.length > 1e4) {
+    const word = cleanHead(item.word);
+    if (/^\d+[a-z]+$/i.test(word) && !item.zh || !validWord(word) || item.zh.length > 1e4) {
       invalid.push(item.word);
       continue;
     }
@@ -182,10 +235,7 @@ function parseGenerationWords(text, filename = "") {
   }
   return { words, duplicates, invalid, overLimit: words.length > MAX_GENERATION_WORDS };
 }
-function containsRequiredWord(text, word) {
-  const escaped = norm(word).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp("(^|[^a-zA-Z'-])" + escaped + "(?=$|[^a-zA-Z'-])", "i").test(norm(text));
-}
+var containsRequiredWord = containsVocabularyTerm;
 function body(a) {
   return a.paragraphs.map((p) => p.en).join("\n");
 }
